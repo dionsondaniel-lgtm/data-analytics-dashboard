@@ -11,7 +11,10 @@ interface RechartsViewsProps {
   practiceData: TransformedPractice[];
   projectData: TransformedProject[];
   learnersData: Learner[];
-  onSelectCohort?: (cohort: string) => void;
+  onSelectCohort?: (cohort: string | null) => void;
+  onSelectModule?: (module: string | null) => void;
+  selectedCohort?: string | null;
+  selectedModule?: string | null;
 }
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#f43f5e', '#8b5cf6', '#0ea5e9'];
@@ -21,7 +24,10 @@ export const RechartsViews: React.FC<RechartsViewsProps> = ({
   practiceData, 
   projectData,
   learnersData,
-  onSelectCohort
+  onSelectCohort,
+  onSelectModule,
+  selectedCohort,
+  selectedModule
 }) => {
   // 1. Total Enrolees by Cohort
   const enroleesByCohort = useMemo(() => {
@@ -168,9 +174,13 @@ export const RechartsViews: React.FC<RechartsViewsProps> = ({
                   barSize={48}
                   onClick={(data) => {
                     if (onSelectCohort && data && data.name) {
-                      const match = data.name.match(/Cohort (\d+)/);
+                      const match = data.name.match(/Cohort ([A-Za-z0-9]+)/i);
                       if (match && match[1]) {
-                        onSelectCohort(match[1]);
+                        if (selectedCohort === match[1]) {
+                          onSelectCohort(null);
+                        } else {
+                          onSelectCohort(match[1]);
+                        }
                       }
                     }
                   }}
@@ -219,7 +229,20 @@ export const RechartsViews: React.FC<RechartsViewsProps> = ({
           </h3>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={attByModule} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart 
+                data={attByModule} 
+                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                onClick={(e) => {
+                  if (onSelectModule && e?.activeLabel) {
+                    if (selectedModule === e.activeLabel) {
+                      onSelectModule(null);
+                    } else {
+                      onSelectModule(e.activeLabel);
+                    }
+                  }
+                }}
+                className={onSelectModule ? "cursor-pointer" : ""}
+              >
                 <defs>
                   <linearGradient id="colorAtt" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
@@ -243,7 +266,20 @@ export const RechartsViews: React.FC<RechartsViewsProps> = ({
           </h3>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={attByModule} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <BarChart 
+                data={attByModule} 
+                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                onClick={(e) => {
+                  if (onSelectModule && e?.activeLabel) {
+                    if (selectedModule === e.activeLabel) {
+                      onSelectModule(null);
+                    } else {
+                      onSelectModule(e.activeLabel);
+                    }
+                  }
+                }}
+                className={onSelectModule ? "cursor-pointer" : ""}
+              >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-gray-100 dark:text-gray-700" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
@@ -261,7 +297,20 @@ export const RechartsViews: React.FC<RechartsViewsProps> = ({
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Practice Submission Rates</h3>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={practiceRates} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <BarChart 
+                data={practiceRates} 
+                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                onClick={(e) => {
+                  if (onSelectModule && e?.activeLabel) {
+                    if (selectedModule === e.activeLabel) {
+                      onSelectModule(null);
+                    } else {
+                      onSelectModule(e.activeLabel);
+                    }
+                  }
+                }}
+                className={onSelectModule ? "cursor-pointer" : ""}
+              >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-gray-100 dark:text-gray-700" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} domain={[0, 100]} />
@@ -278,7 +327,20 @@ export const RechartsViews: React.FC<RechartsViewsProps> = ({
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Average Project Scores</h3>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={projectScores} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <ComposedChart 
+                data={projectScores} 
+                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                onClick={(e) => {
+                  if (onSelectModule && e?.activeLabel) {
+                    if (selectedModule === e.activeLabel) {
+                      onSelectModule(null);
+                    } else {
+                      onSelectModule(e.activeLabel);
+                    }
+                  }
+                }}
+                className={onSelectModule ? "cursor-pointer" : ""}
+              >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-gray-100 dark:text-gray-700" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} domain={[0, 100]} />

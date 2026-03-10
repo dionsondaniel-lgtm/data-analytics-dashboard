@@ -82,7 +82,7 @@ export default function App() {
         Email_Add: row['Email_Add'] || '',
         LinkedIn_url: row['LinkedIn_url'] || '',
         Facebook_url: row['Facebook_url'] || '',
-        COHORT_NO: row['COHORT NO.'] || row['COHORT_NO'] || row['COHORT NO'] || ''
+        COHORT_NO: String(row['COHORT NO.'] || row['COHORT_NO'] || row['COHORT NO'] || '').toUpperCase()
       }));
 
       const alumniMapped = (alumniRaw as any[]).map(row => ({
@@ -98,7 +98,7 @@ export default function App() {
         COMPANY: row['COMPANY'] || '',
         REF_1: row['REF 1'] || row['REF_1'] || '',
         IMAGE_URL: getDriveImageUrl(row['REF 1'] || row['REF_1'] || ''),
-        COHORT_NO: row['COHORT NO.'] || row['COHORT_NO'] || row['COHORT NO'] || ''
+        COHORT_NO: String(row['COHORT NO.'] || row['COHORT_NO'] || row['COHORT NO'] || '').toUpperCase()
       }));
 
       setLearners(learnersMapped);
@@ -116,10 +116,10 @@ export default function App() {
         if (!gid || typeof gid !== 'string' || gid.trim() === '') continue;
 
         // Check for Attendance
-        const attMatch = key.match(/^(SQL|Python|PBI|Excel)\s+Attendance\s+to\s+BQ\s*-\s*(\d+)$/i);
+        const attMatch = key.match(/^(SQL|Python|PBI|Excel)\s+Attendance\s+to\s+BQ\s*-\s*([A-Za-z0-9]+)$/i);
         if (attMatch) {
           const mod = attMatch[1];
-          const cohort = attMatch[2];
+          const cohort = attMatch[2].toUpperCase();
           fetchPromises.push(
             fetchSheetData(key).then(raw => {
               attData.push(...transformAttendance(raw, mod, cohort));
@@ -129,10 +129,10 @@ export default function App() {
         }
 
         // Check for Class Practice
-        const cpMatch = key.match(/^(SQL|Python|PBI|Excel)\s+Class\s+Practice\s+to\s+BQ\s*-\s*(\d+)$/i);
+        const cpMatch = key.match(/^(SQL|Python|PBI|Excel)\s+Class\s+Practice\s+to\s+BQ\s*-\s*([A-Za-z0-9]+)$/i);
         if (cpMatch) {
           const mod = cpMatch[1];
-          const cohort = cpMatch[2];
+          const cohort = cpMatch[2].toUpperCase();
           fetchPromises.push(
             fetchSheetData(key).then(raw => {
               pracData.push(...transformPractice(raw, mod, 'Class Practice', cohort));
@@ -142,10 +142,10 @@ export default function App() {
         }
 
         // Check for Home Practice
-        const hpMatch = key.match(/^(SQL|Python|PBI|Excel)\s+Home\s+Practice\s+to\s+BQ\s*-\s*(\d+)$/i);
+        const hpMatch = key.match(/^(SQL|Python|PBI|Excel)\s+Home\s+Practice\s+to\s+BQ\s*-\s*([A-Za-z0-9]+)$/i);
         if (hpMatch) {
           const mod = hpMatch[1];
-          const cohort = hpMatch[2];
+          const cohort = hpMatch[2].toUpperCase();
           fetchPromises.push(
             fetchSheetData(key).then(raw => {
               pracData.push(...transformPractice(raw, mod, 'Home Practice', cohort));
@@ -155,9 +155,9 @@ export default function App() {
         }
 
         // Check for Summary Project
-        const projMatch = key.match(/^Summary\s+Projects?\s+to\s+BQ\s*-\s*(\d+)$/i);
+        const projMatch = key.match(/^Summary\s+Projects?\s+to\s+BQ\s*-\s*([A-Za-z0-9]+)$/i);
         if (projMatch) {
-          const cohort = projMatch[1];
+          const cohort = projMatch[1].toUpperCase();
           fetchPromises.push(
             fetchSheetData(key).then(raw => {
               projData.push(...transformProjects(raw, cohort));
@@ -192,8 +192,6 @@ export default function App() {
     
     loadData();
   }, [loadData]);
-
-  const metrics = useMemo(() => calculateOverallMetrics(attendanceData, practiceData, projectData), [attendanceData, practiceData, projectData]);
 
   const availableCohorts = useMemo(() => {
     const cohorts = new Set<string>();
@@ -243,24 +241,26 @@ export default function App() {
 
     // Filter data based on selection
     const filteredAtt = attendanceData.filter(d => 
-      (!state.selectedCohort || d.COHORT_NO === state.selectedCohort) &&
+      (!state.selectedCohort || String(d.COHORT_NO).toUpperCase() === String(state.selectedCohort).toUpperCase()) &&
       (!state.selectedModule || d.MODULE === state.selectedModule)
     );
 
     const filteredPrac = practiceData.filter(d => 
-      (!state.selectedCohort || d.COHORT_NO === state.selectedCohort) &&
+      (!state.selectedCohort || String(d.COHORT_NO).toUpperCase() === String(state.selectedCohort).toUpperCase()) &&
       (!state.selectedModule || d.MODULE === state.selectedModule) &&
       (state.currentView === 'Overview' || d.TYPE === state.currentView)
     );
 
     const filteredProj = projectData.filter(d => 
-      (!state.selectedCohort || d.COHORT_NO === state.selectedCohort) &&
+      (!state.selectedCohort || String(d.COHORT_NO).toUpperCase() === String(state.selectedCohort).toUpperCase()) &&
       (!state.selectedModule || d.MODULE === state.selectedModule)
     );
 
     const filteredLearners = learners.filter(d => 
-      (!state.selectedCohort || d.COHORT_NO === state.selectedCohort)
+      (!state.selectedCohort || String(d.COHORT_NO).toUpperCase() === String(state.selectedCohort).toUpperCase())
     );
+
+    const metrics = calculateOverallMetrics(filteredAtt, filteredPrac, filteredProj);
 
     switch (state.currentView) {
       case 'Overview':
@@ -271,8 +271,11 @@ export default function App() {
               attendanceData={filteredAtt} 
               practiceData={filteredPrac} 
               projectData={filteredProj}
-              learnersData={filteredLearners}
+              learnersData={learners}
               onSelectCohort={handleSelectCohort}
+              onSelectModule={handleSelectModule}
+              selectedCohort={state.selectedCohort}
+              selectedModule={state.selectedModule}
             />
             {state.selectedCohort === null && state.selectedModule === null && (
               <div className="mt-8">
