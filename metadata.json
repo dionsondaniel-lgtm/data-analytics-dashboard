@@ -1,0 +1,5 @@
+{
+  "name": "Data Analytics Dashboard",
+  "description": "A modern Data Analytics Dashboard that reads data directly from a public Google Sheet, processes the data, and visualizes it using charts and tables.",
+  "requestFramePermissions": []
+}
