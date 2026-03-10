@@ -1,6 +1,8 @@
 import React, { ReactNode, useEffect, useState } from 'react';
 import { SidebarTree } from './SidebarTree';
 import { ViewType } from '../types';
+import { Menu, X } from 'lucide-react';
+import { clsx } from 'clsx';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -24,6 +26,19 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   availableCohorts = ['1', '2', '3', '4', '5']
 }) => {
   const [bgImage, setBgImage] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= 768) {
+        setIsSidebarOpen(false);
+      } else {
+        setIsSidebarOpen(true);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Listen for storage changes to update background immediately
   useEffect(() => {
@@ -59,27 +74,50 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         <div className="absolute inset-0 bg-white/85 dark:bg-gray-900/90 pointer-events-none z-0 transition-colors duration-200"></div>
       )}
       
-      <div className="z-10 flex h-full w-full relative">
-        <SidebarTree 
-          currentView={currentView}
-          selectedCohort={selectedCohort}
-          selectedModule={selectedModule}
-          onSelectView={onSelectView}
-          onSelectCohort={onSelectCohort}
-          onSelectModule={onSelectModule}
-          availableCohorts={availableCohorts}
+      {/* Mobile Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-20 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
         />
-        <div className="flex-1 flex flex-col overflow-hidden">
+      )}
+
+      {/* Floating Toggle Button */}
+      <button
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        className="fixed bottom-6 right-6 z-50 p-3 bg-indigo-600 text-white rounded-full shadow-xl hover:bg-indigo-700 transition-transform hover:scale-105"
+      >
+        {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+      </button>
+
+      <div className="z-10 flex h-full w-full relative">
+        <div className={clsx(
+          "fixed inset-y-0 left-0 z-30 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 h-full",
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full md:w-0 md:overflow-hidden"
+        )}>
+          <SidebarTree 
+            currentView={currentView}
+            selectedCohort={selectedCohort}
+            selectedModule={selectedModule}
+            onSelectView={onSelectView}
+            onSelectCohort={onSelectCohort}
+            onSelectModule={onSelectModule}
+            availableCohorts={availableCohorts}
+          />
+        </div>
+        <div className="flex-1 flex flex-col overflow-hidden w-full">
           <header className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between transition-colors">
-            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
-              {currentView} {selectedCohort ? `- Cohort ${selectedCohort}` : ''} {selectedModule ? `- ${selectedModule}` : ''}
-            </h1>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Live Data Sync</span>
+              <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+                {currentView} {selectedCohort ? `- Cohort ${selectedCohort}` : ''} {selectedModule ? `- ${selectedModule}` : ''}
+              </h1>
+            </div>
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-gray-500 dark:text-gray-400 hidden sm:inline">Live Data Sync</span>
               <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
             </div>
           </header>
-          <main className="flex-1 overflow-y-auto p-6">
+          <main className="flex-1 overflow-y-auto p-4 sm:p-6">
             <div className="max-w-7xl mx-auto space-y-6">
               {children}
             </div>

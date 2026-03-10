@@ -86,28 +86,6 @@ export const UserManual: React.FC = () => {
             </ul>
           </div>
         </section>
-
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white flex items-center border-b border-gray-100 dark:border-gray-700 pb-2">
-            <Database className="h-6 w-6 mr-3 text-indigo-500 dark:text-indigo-400" />
-            4. Local Development
-          </h2>
-          <div className="prose prose-indigo dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
-            <p>
-              If you have downloaded this project to run locally:
-            </p>
-            <ol className="list-decimal pl-5 space-y-2">
-              <li>Ensure you have Node.js installed on your machine.</li>
-              <li>Open your terminal and navigate to the project directory.</li>
-              <li>Run <code className="dark:bg-gray-800 dark:text-gray-200 px-1 rounded">npm install</code> to install all necessary dependencies (React, Tailwind CSS, Recharts, Lucide, etc.).</li>
-              <li>Run <code className="dark:bg-gray-800 dark:text-gray-200 px-1 rounded">npm run dev</code> to start the local development server.</li>
-              <li>Open your browser to the local address provided (usually <code className="dark:bg-gray-800 dark:text-gray-200 px-1 rounded">http://localhost:5173</code> or <code className="dark:bg-gray-800 dark:text-gray-200 px-1 rounded">http://localhost:3000</code>).</li>
-            </ol>
-            <p className="mt-4 text-sm text-gray-500 dark:text-gray-400 italic">
-              Note: Tailwind CSS is already configured and ready to use. Any changes you make to the components will be reflected immediately thanks to Vite's Hot Module Replacement (HMR).
-            </p>
-          </div>
-        </section>
       </div>
     </div>
   );

@@ -50,51 +50,61 @@ export const transformAttendance = (rawData: any[], moduleName: string, cohortNo
 };
 
 export const transformPractice = (rawData: any[], moduleName: string, type: 'Class Practice' | 'Home Practice', cohortNo: string): TransformedPractice[] => {
-  return rawData.map(row => {
-    let totalRequired = 0;
-    let totalSubmitted = 0;
-    let totalDayDiff = 0;
-    let validDiffs = 0;
+  return rawData
+    .filter(row => {
+      const name = getName(row);
+      return name && name.trim() !== '' && name !== 'Unknown';
+    })
+    .map(row => {
+      let totalRequired = 0;
+      let totalSubmitted = 0;
+      let totalDayDiff = 0;
+      let validDiffs = 0;
 
-    // We assume columns are paired like L1_REQDDATE, L1_SUBMDATE
-    const reqKeys = Object.keys(row).filter(k => k.includes('REQDDATE') || k.includes('ReqdDate') || k.includes('reqddate'));
-    
-    reqKeys.forEach(reqKey => {
-      const prefix = reqKey.split('_')[0]; // e.g., L1
-      const submKey = Object.keys(row).find(k => k.startsWith(prefix) && (k.includes('SUBMDATE') || k.includes('SubmDate') || k.includes('submdate')));
+      // We assume columns are paired like L1_REQDDATE, L1_SUBMDATE
+      const reqKeys = Object.keys(row).filter(k => k.includes('REQDDATE') || k.includes('ReqdDate') || k.includes('reqddate'));
       
-      if (row[reqKey]) {
-        totalRequired++;
-        if (submKey && row[submKey]) {
-          totalSubmitted++;
-          const dayDiff = calculateDayDiff(row[submKey], row[reqKey]);
-          totalDayDiff += dayDiff;
-          validDiffs++;
+      reqKeys.forEach(reqKey => {
+        const prefix = reqKey.split('_')[0]; // e.g., L1
+        const submKey = Object.keys(row).find(k => k.startsWith(prefix) && (k.includes('SUBMDATE') || k.includes('SubmDate') || k.includes('submdate')));
+        
+        if (row[reqKey]) {
+          totalRequired++;
+          if (submKey && row[submKey]) {
+            totalSubmitted++;
+            const dayDiff = calculateDayDiff(row[submKey], row[reqKey]);
+            totalDayDiff += dayDiff;
+            validDiffs++;
+          }
         }
-      }
+      });
+
+      const avgDayDiff = validDiffs > 0 ? totalDayDiff / validDiffs : 0;
+
+      return {
+        NAME: getName(row),
+        COHORT_NO: cohortNo,
+        MODULE: moduleName,
+        TYPE: type,
+        Total_Required: totalRequired,
+        Total_Submitted: totalSubmitted,
+        Rate_of_Submission: totalRequired > 0 ? (totalSubmitted / totalRequired) * 100 : 0,
+        Average_DayDiff: avgDayDiff,
+        Average_WeekDiff: avgDayDiff / 7
+      };
     });
-
-    const avgDayDiff = validDiffs > 0 ? totalDayDiff / validDiffs : 0;
-
-    return {
-      NAME: getName(row),
-      COHORT_NO: cohortNo,
-      MODULE: moduleName,
-      TYPE: type,
-      Total_Required: totalRequired,
-      Total_Submitted: totalSubmitted,
-      Rate_of_Submission: totalRequired > 0 ? (totalSubmitted / totalRequired) * 100 : 0,
-      Average_DayDiff: avgDayDiff,
-      Average_WeekDiff: avgDayDiff / 7
-    };
-  });
 };
 
 export const transformProjects = (rawData: any[], cohortNo: string): TransformedProject[] => {
   const projects: TransformedProject[] = [];
   const modules = ['SQL', 'Excel', 'PBI', 'Python', 'BIT'];
 
-  rawData.forEach(row => {
+  rawData
+    .filter(row => {
+      const name = getName(row);
+      return name && name.trim() !== '' && name !== 'Unknown';
+    })
+    .forEach(row => {
     modules.forEach(mod => {
       const reqDate = row[`${mod} Date Required`] || row[`${mod}_Date_Required`];
       const submDate = row[`${mod} Submitted`] || row[`${mod}_Submitted`];

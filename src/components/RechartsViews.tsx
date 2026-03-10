@@ -162,7 +162,23 @@ export const RechartsViews: React.FC<RechartsViewsProps> = ({
           </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={enroleesByCohort} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <BarChart 
+                data={enroleesByCohort} 
+                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                onClick={(e) => {
+                  if (onSelectCohort && e?.activeLabel) {
+                    const match = String(e.activeLabel).match(/Cohort ([A-Za-z0-9]+)/i);
+                    if (match && match[1]) {
+                      if (selectedCohort === match[1]) {
+                        onSelectCohort(null);
+                      } else {
+                        onSelectCohort(match[1]);
+                      }
+                    }
+                  }
+                }}
+                className={onSelectCohort ? "cursor-pointer" : ""}
+              >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-gray-100 dark:text-gray-700" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
@@ -172,23 +188,15 @@ export const RechartsViews: React.FC<RechartsViewsProps> = ({
                   name="Enrolees" 
                   radius={[6, 6, 0, 0]} 
                   barSize={48}
-                  onClick={(data) => {
-                    if (onSelectCohort && data && data.name) {
-                      const match = data.name.match(/Cohort ([A-Za-z0-9]+)/i);
-                      if (match && match[1]) {
-                        if (selectedCohort === match[1]) {
-                          onSelectCohort(null);
-                        } else {
-                          onSelectCohort(match[1]);
-                        }
-                      }
-                    }
-                  }}
-                  className={onSelectCohort ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}
+                  className="hover:opacity-80 transition-opacity"
                 >
-                  {enroleesByCohort.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
+                  {enroleesByCohort.map((entry, index) => {
+                    const match = entry.name.match(/Cohort ([A-Za-z0-9]+)/i);
+                    const cohortName = match ? match[1] : '';
+                    const isSelected = selectedCohort === cohortName;
+                    const opacity = selectedCohort ? (isSelected ? 1 : 0.3) : 1;
+                    return <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} fillOpacity={opacity} />;
+                  })}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -284,7 +292,13 @@ export const RechartsViews: React.FC<RechartsViewsProps> = ({
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
                 <Tooltip content={<CustomTooltip />} cursor={{fill: 'currentColor', className: 'text-gray-50 dark:text-gray-700/50'}} />
-                <Bar dataKey="Absences" name="Total Absences" fill="#f43f5e" radius={[4, 4, 0, 0]} barSize={32} />
+                <Bar dataKey="Absences" name="Total Absences" radius={[4, 4, 0, 0]} barSize={32}>
+                  {attByModule.map((entry: any, index: number) => {
+                    const isSelected = selectedModule === entry.name;
+                    const opacity = selectedModule ? (isSelected ? 1 : 0.3) : 1;
+                    return <Cell key={`cell-${index}`} fill="#f43f5e" fillOpacity={opacity} />;
+                  })}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -316,8 +330,20 @@ export const RechartsViews: React.FC<RechartsViewsProps> = ({
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} domain={[0, 100]} />
                 <Tooltip content={<CustomTooltip />} cursor={{fill: 'currentColor', className: 'text-gray-50 dark:text-gray-700/50'}} />
                 <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
-                <Bar dataKey="ClassPractice" name="Class Practice" fill="#0ea5e9" radius={[4, 4, 0, 0]} barSize={20} />
-                <Bar dataKey="HomePractice" name="Home Practice" fill="#8b5cf6" radius={[4, 4, 0, 0]} barSize={20} />
+                <Bar dataKey="ClassPractice" name="Class Practice" radius={[4, 4, 0, 0]} barSize={20}>
+                  {practiceRates.map((entry: any, index: number) => {
+                    const isSelected = selectedModule === entry.name;
+                    const opacity = selectedModule ? (isSelected ? 1 : 0.3) : 1;
+                    return <Cell key={`cell-${index}`} fill="#0ea5e9" fillOpacity={opacity} />;
+                  })}
+                </Bar>
+                <Bar dataKey="HomePractice" name="Home Practice" radius={[4, 4, 0, 0]} barSize={20}>
+                  {practiceRates.map((entry: any, index: number) => {
+                    const isSelected = selectedModule === entry.name;
+                    const opacity = selectedModule ? (isSelected ? 1 : 0.3) : 1;
+                    return <Cell key={`cell-${index}`} fill="#8b5cf6" fillOpacity={opacity} />;
+                  })}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -345,7 +371,13 @@ export const RechartsViews: React.FC<RechartsViewsProps> = ({
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} domain={[0, 100]} />
                 <Tooltip content={<CustomTooltip />} cursor={{fill: 'currentColor', className: 'text-gray-50 dark:text-gray-700/50'}} />
-                <Bar dataKey="AverageScore" name="Avg Score" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={32} />
+                <Bar dataKey="AverageScore" name="Avg Score" radius={[4, 4, 0, 0]} barSize={32}>
+                  {projectScores.map((entry: any, index: number) => {
+                    const isSelected = selectedModule === entry.name;
+                    const opacity = selectedModule ? (isSelected ? 1 : 0.3) : 1;
+                    return <Cell key={`cell-${index}`} fill="#f59e0b" fillOpacity={opacity} />;
+                  })}
+                </Bar>
                 <Line type="monotone" dataKey="AverageScore" stroke="#d97706" strokeWidth={3} dot={{r: 4, fill: '#fff', strokeWidth: 2}} activeDot={{r: 6}} />
               </ComposedChart>
             </ResponsiveContainer>
