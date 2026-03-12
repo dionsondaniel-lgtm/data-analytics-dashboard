@@ -6,10 +6,12 @@ import { ImageGrid } from './components/ImageGrid';
 import { DataTable } from './components/DataTable';
 import { Settings } from './components/Settings';
 import { UserManual } from './components/UserManual';
+import { AutoReport } from './components/AutoReport';
 import { fetchSheetData, getStoredGIDs } from './services/GoogleSheetService';
 import { transformAttendance, transformPractice, transformProjects, calculateOverallMetrics } from './services/DataTransformer';
 import { AppState, ViewType, TransformedAttendance, TransformedPractice, TransformedProject, Learner, AlumniProject, AllCohortsPhoto } from './types';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Download, PlayCircle } from 'lucide-react';
+import { exportDashboardToPDF } from './utils/pdfExport';
 
 export const getDriveImageUrl = (url: string) => {
   if (!url) return '';
@@ -29,6 +31,7 @@ export default function App() {
 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAutoReportOpen, setIsAutoReportOpen] = useState(false);
 
   // Apply theme on initial load and listen for changes
   useEffect(() => {
@@ -218,6 +221,79 @@ export default function App() {
     // setState(s => ({ ...s, currentView: 'Overview' }));
   };
 
+  // Filter data based on selection
+  const normalizeCohort = (cohort: string | null | undefined) => {
+    if (!cohort) return '';
+    const match = String(cohort).match(/\d+/);
+    return match ? match[0] : String(cohort).toUpperCase();
+  };
+
+  const selectedCohortNormalized = normalizeCohort(state.selectedCohort);
+
+  const filteredAtt = attendanceData.filter(d => 
+    (!state.selectedCohort || normalizeCohort(d.COHORT_NO) === selectedCohortNormalized) &&
+    (!state.selectedModule || d.MODULE === state.selectedModule)
+  );
+
+  const filteredPrac = practiceData.filter(d => 
+    (!state.selectedCohort || normalizeCohort(d.COHORT_NO) === selectedCohortNormalized) &&
+    (!state.selectedModule || d.MODULE === state.selectedModule) &&
+    (state.currentView === 'Overview' || d.TYPE === state.currentView)
+  );
+
+  const filteredProj = projectData.filter(d => 
+    (!state.selectedCohort || normalizeCohort(d.COHORT_NO) === selectedCohortNormalized) &&
+    (!state.selectedModule || d.MODULE === state.selectedModule)
+  );
+
+  const filteredLearners = learners.filter(d => 
+    (!state.selectedCohort || normalizeCohort(d.COHORT_NO) === selectedCohortNormalized)
+  );
+
+  const metrics = calculateOverallMetrics(filteredAtt, filteredPrac, filteredProj);
+
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleDownloadPDF = async () => {
+    setIsExporting(true);
+    try {
+      await exportDashboardToPDF('dashboard-content', {
+        cohort: state.selectedCohort,
+        module: state.selectedModule
+      });
+    } catch (err) {
+      console.error('PDF export failed', err);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const headerActions = (
+    <div className="flex items-center space-x-2">
+      <button
+        onClick={() => setIsAutoReportOpen(true)}
+        className="flex items-center px-3 py-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+      >
+        <PlayCircle className="w-4 h-4 mr-1.5" />
+        <span className="hidden sm:inline">Auto Report</span>
+      </button>
+      <button
+        onClick={handleDownloadPDF}
+        disabled={isExporting}
+        className="group flex items-center justify-center p-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300 shadow-sm overflow-hidden"
+      >
+        {isExporting ? (
+          <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />
+        ) : (
+          <Download className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+        )}
+        <span className="max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 group-hover:ml-2 transition-all duration-300 ease-in-out whitespace-nowrap">
+          {isExporting ? 'Exporting...' : 'Export PDF'}
+        </span>
+      </button>
+    </div>
+  );
+
   const renderContent = () => {
     if (state.currentView === 'Settings') {
       return <Settings onSave={handleSaveSettings} />;
@@ -244,41 +320,10 @@ export default function App() {
       );
     }
 
-    // Filter data based on selection
-    const normalizeCohort = (cohort: string | null | undefined) => {
-      if (!cohort) return '';
-      const match = String(cohort).match(/\d+/);
-      return match ? match[0] : String(cohort).toUpperCase();
-    };
-
-    const selectedCohortNormalized = normalizeCohort(state.selectedCohort);
-
-    const filteredAtt = attendanceData.filter(d => 
-      (!state.selectedCohort || normalizeCohort(d.COHORT_NO) === selectedCohortNormalized) &&
-      (!state.selectedModule || d.MODULE === state.selectedModule)
-    );
-
-    const filteredPrac = practiceData.filter(d => 
-      (!state.selectedCohort || normalizeCohort(d.COHORT_NO) === selectedCohortNormalized) &&
-      (!state.selectedModule || d.MODULE === state.selectedModule) &&
-      (state.currentView === 'Overview' || d.TYPE === state.currentView)
-    );
-
-    const filteredProj = projectData.filter(d => 
-      (!state.selectedCohort || normalizeCohort(d.COHORT_NO) === selectedCohortNormalized) &&
-      (!state.selectedModule || d.MODULE === state.selectedModule)
-    );
-
-    const filteredLearners = learners.filter(d => 
-      (!state.selectedCohort || normalizeCohort(d.COHORT_NO) === selectedCohortNormalized)
-    );
-
-    const metrics = calculateOverallMetrics(filteredAtt, filteredPrac, filteredProj);
-
     switch (state.currentView) {
       case 'Overview':
         return (
-          <div className="space-y-6">
+          <div id="dashboard-content" className="space-y-6 bg-white dark:bg-transparent p-1 rounded-xl">
             <MetricsOverview metrics={metrics} />
             <RechartsViews 
               attendanceData={filteredAtt} 
@@ -314,16 +359,26 @@ export default function App() {
   };
 
   return (
-    <DashboardLayout
-      currentView={state.currentView}
-      selectedCohort={state.selectedCohort}
-      selectedModule={state.selectedModule}
-      onSelectView={handleSelectView}
-      onSelectCohort={handleSelectCohort}
-      onSelectModule={handleSelectModule}
-      availableCohorts={availableCohorts.length > 0 ? availableCohorts : undefined}
-    >
-      {renderContent()}
-    </DashboardLayout>
+    <>
+      <DashboardLayout
+        currentView={state.currentView}
+        selectedCohort={state.selectedCohort}
+        selectedModule={state.selectedModule}
+        onSelectView={handleSelectView}
+        onSelectCohort={handleSelectCohort}
+        onSelectModule={handleSelectModule}
+        availableCohorts={availableCohorts.length > 0 ? availableCohorts : undefined}
+        headerActions={headerActions}
+      >
+        {renderContent()}
+      </DashboardLayout>
+      
+      <AutoReport 
+        isOpen={isAutoReportOpen} 
+        onClose={() => setIsAutoReportOpen(false)} 
+        metrics={metrics}
+        filters={{ cohort: state.selectedCohort, module: state.selectedModule }}
+      />
+    </>
   );
 }

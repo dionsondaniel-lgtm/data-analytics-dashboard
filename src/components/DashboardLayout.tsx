@@ -13,6 +13,7 @@ interface DashboardLayoutProps {
   onSelectCohort: (cohort: string | null) => void;
   onSelectModule: (module: string | null) => void;
   availableCohorts?: string[];
+  headerActions?: ReactNode;
 }
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
@@ -23,7 +24,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   onSelectView,
   onSelectCohort,
   onSelectModule,
-  availableCohorts = ['1', '2', '3', '4', '5']
+  availableCohorts = ['1', '2', '3', '4', '5'],
+  headerActions
 }) => {
   const [bgImage, setBgImage] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768);
@@ -86,7 +88,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       <button
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
         className={clsx(
-          "fixed top-6 z-40 flex h-6 w-6 items-center justify-center rounded-full bg-white border border-gray-200 shadow-sm text-gray-500 hover:text-gray-900 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:text-white transition-all duration-300",
+          "fixed top-[61px] -translate-y-1/2 z-40 flex h-6 w-6 items-center justify-center rounded-full bg-white border border-gray-200 shadow-sm text-gray-500 hover:text-gray-900 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:text-white transition-all duration-300",
           isSidebarOpen ? "left-64 -translate-x-1/2" : "left-0 translate-x-1/2"
         )}
       >
@@ -116,6 +118,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               </h1>
             </div>
             <div className="flex items-center space-x-4">
+              {headerActions}
               <span className="text-sm text-gray-500 dark:text-gray-400 hidden sm:inline">Live Data Sync</span>
               <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
             </div>
