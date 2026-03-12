@@ -32,14 +32,27 @@ export const RechartsViews: React.FC<RechartsViewsProps> = ({
   // 1. Total Enrolees by Cohort
   const enroleesByCohort = useMemo(() => {
     const counts = learnersData.reduce((acc, curr) => {
-      const cohort = curr.COHORT_NO || 'Unknown';
+      let cohort = curr.COHORT_NO || 'Unknown';
+      const match = cohort.match(/\d+/);
+      if (match) {
+        cohort = match[0];
+      } else {
+        cohort = cohort.toUpperCase();
+      }
       acc[cohort] = (acc[cohort] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
     
     return Object.entries(counts)
       .map(([name, count]) => ({ name: `Cohort ${name}`, count }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .sort((a, b) => {
+        const numA = parseInt(a.name.replace('Cohort ', ''));
+        const numB = parseInt(b.name.replace('Cohort ', ''));
+        if (isNaN(numA) && isNaN(numB)) return a.name.localeCompare(b.name);
+        if (isNaN(numA)) return 1;
+        if (isNaN(numB)) return -1;
+        return numA - numB;
+      });
   }, [learnersData]);
 
   // 2. Attendance Performance by Module

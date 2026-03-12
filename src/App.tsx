@@ -197,7 +197,12 @@ export default function App() {
     const cohorts = new Set<string>();
     learners.forEach(l => {
       if (l.COHORT_NO && l.COHORT_NO.trim() !== '') {
-        cohorts.add(l.COHORT_NO);
+        const match = l.COHORT_NO.match(/\d+/);
+        if (match) {
+          cohorts.add(match[0]);
+        } else {
+          cohorts.add(l.COHORT_NO.toUpperCase());
+        }
       }
     });
     return Array.from(cohorts).sort((a, b) => parseInt(a) - parseInt(b));
@@ -240,24 +245,32 @@ export default function App() {
     }
 
     // Filter data based on selection
+    const normalizeCohort = (cohort: string | null | undefined) => {
+      if (!cohort) return '';
+      const match = String(cohort).match(/\d+/);
+      return match ? match[0] : String(cohort).toUpperCase();
+    };
+
+    const selectedCohortNormalized = normalizeCohort(state.selectedCohort);
+
     const filteredAtt = attendanceData.filter(d => 
-      (!state.selectedCohort || String(d.COHORT_NO).toUpperCase() === String(state.selectedCohort).toUpperCase()) &&
+      (!state.selectedCohort || normalizeCohort(d.COHORT_NO) === selectedCohortNormalized) &&
       (!state.selectedModule || d.MODULE === state.selectedModule)
     );
 
     const filteredPrac = practiceData.filter(d => 
-      (!state.selectedCohort || String(d.COHORT_NO).toUpperCase() === String(state.selectedCohort).toUpperCase()) &&
+      (!state.selectedCohort || normalizeCohort(d.COHORT_NO) === selectedCohortNormalized) &&
       (!state.selectedModule || d.MODULE === state.selectedModule) &&
       (state.currentView === 'Overview' || d.TYPE === state.currentView)
     );
 
     const filteredProj = projectData.filter(d => 
-      (!state.selectedCohort || String(d.COHORT_NO).toUpperCase() === String(state.selectedCohort).toUpperCase()) &&
+      (!state.selectedCohort || normalizeCohort(d.COHORT_NO) === selectedCohortNormalized) &&
       (!state.selectedModule || d.MODULE === state.selectedModule)
     );
 
     const filteredLearners = learners.filter(d => 
-      (!state.selectedCohort || String(d.COHORT_NO).toUpperCase() === String(state.selectedCohort).toUpperCase())
+      (!state.selectedCohort || normalizeCohort(d.COHORT_NO) === selectedCohortNormalized)
     );
 
     const metrics = calculateOverallMetrics(filteredAtt, filteredPrac, filteredProj);

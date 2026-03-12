@@ -61,16 +61,24 @@ export const transformPractice = (rawData: any[], moduleName: string, type: 'Cla
       let totalDayDiff = 0;
       let validDiffs = 0;
 
-      // We assume columns are paired like L1_REQDDATE, L1_SUBMDATE
-      const reqKeys = Object.keys(row).filter(k => k.includes('REQDDATE') || k.includes('ReqdDate') || k.includes('reqddate'));
+      // We assume columns are paired like L1_REQDDATE, L1_SUBMDATE or L1 Date Required, L1 Date Submitted
+      const reqKeys = Object.keys(row).filter(k => {
+        const upperK = k.toUpperCase();
+        return upperK.includes('REQDDATE') || upperK.includes('DATE REQUIRED') || upperK.includes('DATE_REQUIRED');
+      });
       
       reqKeys.forEach(reqKey => {
-        const prefix = reqKey.split('_')[0]; // e.g., L1
-        const submKey = Object.keys(row).find(k => k.startsWith(prefix) && (k.includes('SUBMDATE') || k.includes('SubmDate') || k.includes('submdate')));
+        const prefixMatch = reqKey.match(/^\s*(L\d+)/i);
+        const prefix = prefixMatch ? prefixMatch[1] : reqKey.trim().split(/[_ ]/)[0]; // e.g., L1
         
-        if (row[reqKey]) {
+        const submKey = Object.keys(row).find(k => {
+          const upperK = k.toUpperCase();
+          return k.trim().toUpperCase().startsWith(prefix.toUpperCase()) && (upperK.includes('SUBMDATE') || upperK.includes('DATE SUBMITTED') || upperK.includes('DATE_SUBMITTED'));
+        });
+        
+        if (row[reqKey] && String(row[reqKey]).trim() !== '') {
           totalRequired++;
-          if (submKey && row[submKey]) {
+          if (submKey && row[submKey] && String(row[submKey]).trim() !== '') {
             totalSubmitted++;
             const dayDiff = calculateDayDiff(row[submKey], row[reqKey]);
             totalDayDiff += dayDiff;
@@ -99,6 +107,13 @@ export const transformProjects = (rawData: any[], cohortNo: string): Transformed
   const projects: TransformedProject[] = [];
   const modules = ['SQL', 'Excel', 'PBI', 'Python', 'BIT'];
 
+  const findKey = (row: any, searchStrings: string[]) => {
+    return Object.keys(row).find(k => {
+      const cleanK = k.trim().toUpperCase();
+      return searchStrings.some(s => cleanK === s.toUpperCase());
+    });
+  };
+
   rawData
     .filter(row => {
       const name = getName(row);
@@ -106,10 +121,15 @@ export const transformProjects = (rawData: any[], cohortNo: string): Transformed
     })
     .forEach(row => {
     modules.forEach(mod => {
-      const reqDate = row[`${mod} Date Required`] || row[`${mod}_Date_Required`];
-      const submDate = row[`${mod} Submitted`] || row[`${mod}_Submitted`];
-      const totalScore = parseFloat(row[`${mod} Total Score`] || row[`${mod}_Total_Score`]);
-      const actScore = parseFloat(row[`${mod} Score`] || row[`${mod}_Score`]);
+      const reqDateKey = findKey(row, [`${mod} DATE REQUIRED`, `${mod}_DATE_REQUIRED`]);
+      const submDateKey = findKey(row, [`${mod} SUBMITTED`, `${mod}_SUBMITTED`, `${mod} DATE SUBMITTED`, `${mod}_DATE_SUBMITTED`]);
+      const totalScoreKey = findKey(row, [`${mod} TOTAL SCORE`, `${mod}_TOTAL_SCORE`]);
+      const actScoreKey = findKey(row, [`${mod} SCORE`, `${mod}_SCORE`]);
+
+      const reqDate = reqDateKey ? row[reqDateKey] : undefined;
+      const submDate = submDateKey ? row[submDateKey] : undefined;
+      const totalScore = totalScoreKey ? parseFloat(row[totalScoreKey]) : NaN;
+      const actScore = actScoreKey ? parseFloat(row[actScoreKey]) : NaN;
 
       if (reqDate || submDate || !isNaN(totalScore)) {
         projects.push({

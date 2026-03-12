@@ -1,7 +1,7 @@
 import React, { ReactNode, useEffect, useState } from 'react';
 import { SidebarTree } from './SidebarTree';
 import { ViewType } from '../types';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { clsx } from 'clsx';
 
 interface DashboardLayoutProps {
@@ -82,12 +82,15 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         />
       )}
 
-      {/* Floating Toggle Button */}
+      {/* Boundary Toggle Button */}
       <button
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        className="fixed bottom-6 right-6 z-50 p-3 bg-indigo-600 text-white rounded-full shadow-xl hover:bg-indigo-700 transition-transform hover:scale-105"
+        className={clsx(
+          "fixed top-6 z-40 flex h-6 w-6 items-center justify-center rounded-full bg-white border border-gray-200 shadow-sm text-gray-500 hover:text-gray-900 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:text-white transition-all duration-300",
+          isSidebarOpen ? "left-64 -translate-x-1/2" : "left-0 translate-x-1/2"
+        )}
       >
-        {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        {isSidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
       </button>
 
       <div className="z-10 flex h-full w-full relative">
@@ -108,7 +111,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         <div className="flex-1 flex flex-col overflow-hidden w-full">
           <header className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between transition-colors">
             <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+              <h1 className="text-2xl font-semibold text-gray-900 dark:text-white ml-2 md:ml-0">
                 {currentView} {selectedCohort ? `- Cohort ${selectedCohort}` : ''} {selectedModule ? `- ${selectedModule}` : ''}
               </h1>
             </div>

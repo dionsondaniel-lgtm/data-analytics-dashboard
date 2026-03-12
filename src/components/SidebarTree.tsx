@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronRight, ChevronDown, LayoutDashboard, Users, BookOpen, CheckSquare, Home, Award, Image as ImageIcon, FileText, Settings, HelpCircle } from 'lucide-react';
+import { ChevronRight, ChevronDown, LayoutDashboard, Users, BookOpen, CheckSquare, Home, Award, Image as ImageIcon, FileText, Settings, HelpCircle, Briefcase } from 'lucide-react';
 import { ViewType } from '../types';
 import { clsx } from 'clsx';
 

@@ -81,5 +81,6 @@ export type ViewType = 'Overview' | 'Attendance' | 'Class Practice' | 'Home Prac
 export interface AppState {
   selectedCohort: string | null;
   selectedModule: string | null;
+  selectedTeam: string | null;
   currentView: ViewType;
 }
