@@ -101,7 +101,7 @@ ${metrics.Average_GPA >= 85 ? '🏆 [EXCELLENT] High project performance observe
         {/* Terminal/Video Content Area */}
         <div 
           ref={contentRef}
-          className="p-8 flex-1 overflow-y-auto font-mono text-base md:text-lg text-green-400 whitespace-pre-wrap leading-relaxed bg-gradient-to-b from-gray-900 to-black"
+          className="p-8 flex-1 overflow-y-auto font-mono text-base md:text-lg text-green-400 whitespace-pre-wrap leading-relaxed bg-gradient-to-b from-gray-900 to-black scrollbar-elegant"
           style={{ textShadow: '0 0 5px rgba(74, 222, 128, 0.3)' }}
         >
           {text}

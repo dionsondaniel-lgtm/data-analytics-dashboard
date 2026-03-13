@@ -42,7 +42,7 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({
   );
 
   return (
-    <div className="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 h-full overflow-y-auto flex flex-col transition-colors">
+    <div className="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 h-full overflow-y-auto flex flex-col transition-colors scrollbar-elegant">
       <div className="p-4 border-b border-gray-200 dark:border-gray-800">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
           <LayoutDashboard className="mr-2 h-5 w-5 text-indigo-600 dark:text-indigo-400" />
@@ -105,6 +105,10 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({
               {mod}
             </button>
           ))}
+        </div>
+
+        <div className="pt-2 pb-2">
+          <NavItem icon={Briefcase} label="Profiles" active={currentView === 'Profiles'} onClick={() => onSelectView('Profiles')} />
         </div>
 
         <div className="pt-4 space-y-1 border-t border-gray-200 dark:border-gray-800">

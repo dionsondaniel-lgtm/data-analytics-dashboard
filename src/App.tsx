@@ -3,21 +3,30 @@ import { DashboardLayout } from './components/DashboardLayout';
 import { MetricsOverview } from './components/MetricsOverview';
 import { RechartsViews } from './components/RechartsViews';
 import { ImageGrid } from './components/ImageGrid';
+import { Profiles } from './components/Profiles';
 import { DataTable } from './components/DataTable';
 import { Settings } from './components/Settings';
 import { UserManual } from './components/UserManual';
 import { AutoReport } from './components/AutoReport';
 import { fetchSheetData, getStoredGIDs } from './services/GoogleSheetService';
 import { transformAttendance, transformPractice, transformProjects, calculateOverallMetrics } from './services/DataTransformer';
-import { AppState, ViewType, TransformedAttendance, TransformedPractice, TransformedProject, Learner, AlumniProject, AllCohortsPhoto } from './types';
+import { AppState, ViewType, TransformedAttendance, TransformedPractice, TransformedProject, Learner, AlumniProject, AllCohortsPhoto, CohortImage } from './types';
 import { Loader2, Download, PlayCircle } from 'lucide-react';
 import { exportDashboardToPDF } from './utils/pdfExport';
 
 export const getDriveImageUrl = (url: string) => {
-  if (!url) return '';
+  if (!url) return null;
   const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
   if (match && match[1]) {
-    return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+    return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
+  }
+  return null;
+};
+
+export const getHDImageUrl = (url: string) => {
+  if (!url) return '';
+  if (url.includes('drive.google.com/thumbnail') && !url.includes('sz=')) {
+    return `${url}&sz=w1000`;
   }
   return url;
 };
@@ -62,6 +71,7 @@ export default function App() {
   const [learners, setLearners] = useState<Learner[]>([]);
   const [alumniProjects, setAlumniProjects] = useState<AlumniProject[]>([]);
   const [cohortPhotos, setCohortPhotos] = useState<AllCohortsPhoto[]>([]);
+  const [cohortImages, setCohortImages] = useState<CohortImage[]>([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -70,10 +80,11 @@ export default function App() {
       const gids = getStoredGIDs();
 
       // Fetch base data
-      const [learnersRaw, alumniRaw, photosRaw] = await Promise.all([
+      const [learnersRaw, alumniRaw, photosRaw, cohortImagesRaw] = await Promise.all([
         fetchSheetData('Learners detail to BQ'),
         fetchSheetData('Alumni Project to BQ'),
-        fetchSheetData('AllCohortsphototoBQ')
+        fetchSheetData('AllCohortsphototoBQ'),
+        fetchSheetData('Cohort images to BQ')
       ]);
 
       const learnersMapped = (learnersRaw as any[]).map(row => ({
@@ -88,25 +99,58 @@ export default function App() {
         COHORT_NO: String(row['COHORT NO.'] || row['COHORT_NO'] || row['COHORT NO'] || '').toUpperCase()
       }));
 
-      const alumniMapped = (alumniRaw as any[]).map(row => ({
-        Project: row['Project'] || '',
-        Status: row['Status'] || '',
-        Project_Image_Ref: row['Project Image Ref'] || row['Project_Image_Ref'] || '',
-        Project_Image_Url: getDriveImageUrl(row['Project Image Ref'] || row['Project_Image_Ref'] || ''),
-        Staff_1_to_10: row['Staff_1_to_10'] || ''
-      }));
+      const alumniMapped = (alumniRaw as any[]).map(row => {
+        const imgUrl = row['Project Image Url'] || row['Project_Image_Url'] || '';
+        const imgRef = row['Project Image Ref'] || row['Project_Image_Ref'] || '';
+        
+        // Combine Staff 1 to Staff 10
+        const staffList: string[] = [];
+        for (let i = 1; i <= 10; i++) {
+          const staff = row[`Staff ${i}`] || row[`Staff_${i}`];
+          if (staff && typeof staff === 'string' && staff.trim() !== '') {
+            staffList.push(staff.trim());
+          }
+        }
+        
+        return {
+          Project: row['Project'] || '',
+          Status: row['Status'] || '',
+          Project_Image_Ref: imgRef,
+          // Prefer HD image from url, fallback to ref
+          Project_Image_Url: getHDImageUrl(imgUrl) || getDriveImageUrl(imgRef),
+          Staff_1_to_10: staffList.length > 0 ? staffList.join(', ') : (row['Staff_1_to_10'] || '')
+        };
+      });
 
-      const photosMapped = (photosRaw as any[]).map(row => ({
-        NAME: row['NAME'] || '',
-        COMPANY: row['COMPANY'] || '',
-        REF_1: row['REF 1'] || row['REF_1'] || '',
-        IMAGE_URL: getDriveImageUrl(row['REF 1'] || row['REF_1'] || ''),
-        COHORT_NO: String(row['COHORT NO.'] || row['COHORT_NO'] || row['COHORT NO'] || '').toUpperCase()
-      }));
+      const photosMapped = (photosRaw as any[]).map(row => {
+        const imgUrl = row['IMAGE URL'] || row['IMAGE_URL'] || '';
+        const ref1 = row['REF 1'] || row['REF_1'] || '';
+        
+        return {
+          NAME: row['NAME'] || '',
+          COMPANY: row['COMPANY'] || '',
+          REF_1: ref1,
+          // Prefer HD image from url, fallback to ref
+          IMAGE_URL: getHDImageUrl(imgUrl) || getDriveImageUrl(ref1),
+          COHORT_NO: String(row['COHORT NO.'] || row['COHORT_NO'] || row['COHORT NO'] || '').toUpperCase()
+        };
+      });
+
+      const cohortImagesMapped = (cohortImagesRaw as any[]).map(row => {
+        const imgUrl = row['image_url'] || row['IMAGE_URL'] || '';
+        const ref = row['Reference'] || row['REFERENCE'] || '';
+        // Prefer HD image from url, fallback to ref
+        return {
+          Cohort_no: String(row['Cohort no.'] || row['Cohort_no'] || row['COHORT NO'] || '').toUpperCase(),
+          Reference: ref,
+          image_url: getHDImageUrl(imgUrl) || getDriveImageUrl(ref)
+        };
+      });
 
       setLearners(learnersMapped);
       setAlumniProjects(alumniMapped);
       setCohortPhotos(photosMapped);
+      setCohortImages(cohortImagesMapped);
 
       // Fetch dynamic cohort data based on configured GIDs
       const attData: TransformedAttendance[] = [];
@@ -337,7 +381,7 @@ export default function App() {
             />
             {state.selectedCohort === null && state.selectedModule === null && (
               <div className="mt-8">
-                <ImageGrid alumniProjects={alumniProjects.slice(0, 4)} cohortPhotos={cohortPhotos.slice(0, 4)} />
+                <ImageGrid alumniProjects={alumniProjects} cohortPhotos={cohortPhotos} horizontal={true} />
               </div>
             )}
           </div>
@@ -351,6 +395,8 @@ export default function App() {
         return <DataTable columns={['NAME', 'COHORT_NO', 'MODULE', 'Status', 'DayDiff', 'GPA']} data={filteredProj} />;
       case 'Alumni Projects':
         return <ImageGrid alumniProjects={alumniProjects} />;
+      case 'Profiles':
+        return <Profiles learners={filteredLearners} cohortPhotos={cohortPhotos} alumniProjects={alumniProjects} cohortImages={cohortImages} />;
       case 'Learners Detail':
         return <DataTable columns={['NAME', 'COMPANY', 'DESIGNATION', 'Address', 'Cellphone_No', 'Email_Add', 'LinkedIn_url', 'Facebook_url', 'COHORT_NO']} data={filteredLearners} />;
       default:

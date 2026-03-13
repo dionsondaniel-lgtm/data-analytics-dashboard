@@ -4,26 +4,32 @@ import { AlumniProject, AllCohortsPhoto } from '../types';
 interface ImageGridProps {
   alumniProjects?: AlumniProject[];
   cohortPhotos?: AllCohortsPhoto[];
+  horizontal?: boolean;
 }
 
-export const ImageGrid: React.FC<ImageGridProps> = ({ alumniProjects, cohortPhotos }) => {
+export const ImageGrid: React.FC<ImageGridProps> = ({ alumniProjects, cohortPhotos, horizontal = false }) => {
   // Helper to extract a clean URL if it's wrapped in some text or is a drive link
   const cleanUrl = (url: string) => {
     if (!url) return '';
-    // If it's a google drive link, we might need to transform it to a thumbnail link, 
-    // but for now we'll just use it directly if it's an image, or use a placeholder if it's not directly renderable.
-    // Assuming the URLs provided are direct image links or we just render them as is.
     return url.trim();
   };
+
+  const containerClass = horizontal 
+    ? "flex overflow-x-auto pb-6 -mx-4 px-4 sm:mx-0 sm:px-0 space-x-6 snap-x scrollbar-elegant" 
+    : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6";
+
+  const itemClass = horizontal
+    ? "flex-none w-72 sm:w-80 snap-start bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow"
+    : "bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow";
 
   return (
     <div className="space-y-8">
       {alumniProjects && alumniProjects.length > 0 && (
         <div>
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Alumni Projects</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className={containerClass}>
             {alumniProjects.map((proj, idx) => (
-              <div key={idx} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow">
+              <div key={idx} className={itemClass}>
                 <div className="aspect-video bg-gray-100 dark:bg-gray-700 relative">
                   {proj.Project_Image_Url ? (
                     <img 
@@ -57,9 +63,9 @@ export const ImageGrid: React.FC<ImageGridProps> = ({ alumniProjects, cohortPhot
       {cohortPhotos && cohortPhotos.length > 0 && (
         <div>
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Cohort Photos</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className={containerClass}>
             {cohortPhotos.map((photo, idx) => (
-              <div key={idx} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow">
+              <div key={idx} className={itemClass}>
                 <div className="aspect-square bg-gray-100 dark:bg-gray-700 relative">
                   {photo.IMAGE_URL ? (
                     <img 

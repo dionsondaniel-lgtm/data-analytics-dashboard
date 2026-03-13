@@ -70,15 +70,14 @@ export const exportDashboardToPDF = async (
     });
 
     // 4. Tag chart cards to force them to be full-width and avoid page breaks
-    // We also select .bg-gradient-to-br to catch the Attendance Champions card
-    const chartContainers = clonedElement.querySelectorAll('.recharts-responsive-container, .bg-gradient-to-br');
+    const chartContainers = clonedElement.querySelectorAll('.recharts-responsive-container');
     chartContainers.forEach(container => {
       let current = container as HTMLElement;
       let cardFound = false;
       while (current && current !== clonedElement) {
         const className = current.className || '';
         // Find the closest card container
-        if (typeof className === 'string' && (className.includes('bg-white') || className.includes('bg-gray') || className.includes('shadow') || className.includes('bg-gradient'))) {
+        if (typeof className === 'string' && (className.includes('bg-white') || className.includes('bg-gray') || className.includes('shadow'))) {
           current.classList.add('print-chart-card');
           cardFound = true;
           break;
@@ -179,24 +178,6 @@ export const exportDashboardToPDF = async (
                 break-inside: avoid !important;
                 grid-column: 1 / -1 !important; /* Force full width in grid */
                 margin-bottom: 2rem !important;
-              }
-              
-              /* Fix Attendance Champions card (gradient background with white text) for print */
-              .bg-gradient-to-br {
-                background: #f3f4f6 !important; /* Light gray fallback */
-                background-image: none !important;
-                border: 1px solid #e5e7eb !important;
-                color: black !important;
-              }
-              .bg-gradient-to-br * {
-                color: black !important;
-              }
-              .bg-white\\/10, .bg-white\\/20 {
-                background-color: #ffffff !important;
-                border: 1px solid #d1d5db !important;
-              }
-              .text-yellow-300 {
-                color: #d97706 !important; /* Darker yellow/orange for print visibility */
               }
               
               /* Add a nice header */

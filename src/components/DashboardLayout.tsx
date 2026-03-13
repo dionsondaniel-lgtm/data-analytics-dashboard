@@ -123,7 +123,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
             </div>
           </header>
-          <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <main className="flex-1 overflow-y-auto p-4 sm:p-6 scrollbar-elegant">
             <div className="max-w-7xl mx-auto space-y-6">
               {children}
             </div>
