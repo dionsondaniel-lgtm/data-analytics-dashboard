@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AlumniProject, AllCohortsPhoto } from '../types';
+import { Lock, Unlock, KeyRound } from 'lucide-react';
 
 interface ImageGridProps {
   alumniProjects?: AlumniProject[];
@@ -8,6 +9,21 @@ interface ImageGridProps {
 }
 
 export const ImageGrid: React.FC<ImageGridProps> = ({ alumniProjects, cohortPhotos, horizontal = false }) => {
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const handleUnlock = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === 'Elite7') {
+      setIsUnlocked(true);
+      setError('');
+    } else {
+      setError('Incorrect password');
+      setPassword('');
+    }
+  };
+
   // Helper to extract a clean URL if it's wrapped in some text or is a drive link
   const cleanUrl = (url: string) => {
     if (!url) return '';
@@ -107,13 +123,48 @@ export const ImageGrid: React.FC<ImageGridProps> = ({ alumniProjects, cohortPhot
 
       {cohortPhotos && cohortPhotos.length > 0 && (
         <div>
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Cohort Photos</h3>
-          {horizontal ? (
-            renderMarquee(cohortPhotos, renderCohortItem)
-          ) : (
-            <div className={containerClass}>
-              {cohortPhotos.map(renderCohortItem)}
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            Cohort Photos
+            {!isUnlocked && <Lock className="w-5 h-5 text-gray-400" />}
+            {isUnlocked && <Unlock className="w-5 h-5 text-emerald-500" />}
+          </h3>
+          
+          {!isUnlocked ? (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 flex flex-col items-center justify-center max-w-md mx-auto">
+              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+                <KeyRound className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+              </div>
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Protected Content</h4>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 text-center">
+                Please enter the password to view the cohort photos.
+              </p>
+              <form onSubmit={handleUnlock} className="w-full space-y-4">
+                <div>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter password"
+                    className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all dark:text-white"
+                  />
+                  {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+                </div>
+                <button
+                  type="submit"
+                  className="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-colors"
+                >
+                  Unlock Photos
+                </button>
+              </form>
             </div>
+          ) : (
+            horizontal ? (
+              renderMarquee(cohortPhotos, renderCohortItem)
+            ) : (
+              <div className={containerClass}>
+                {cohortPhotos.map(renderCohortItem)}
+              </div>
+            )
           )}
         </div>
       )}
