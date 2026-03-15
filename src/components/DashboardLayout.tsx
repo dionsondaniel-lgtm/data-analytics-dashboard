@@ -29,7 +29,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   headerActions,
   subHeader
 }) => {
-  const [bgImage, setBgImage] = useState('');
+  const [bgImage, setBgImage] = useState('https://t4.ftcdn.net/jpg/07/49/21/07/360_F_749210788_1LKxjjOHZPsJZwDOclb8D0Y5UsT20blt.jpg');
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768);
 
   useEffect(() => {
@@ -47,7 +47,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   // Listen for storage changes to update background immediately
   useEffect(() => {
     const updateBg = () => {
-      setBgImage(localStorage.getItem('app_bg') || '');
+      setBgImage(localStorage.getItem('app_bg') || 'https://t4.ftcdn.net/jpg/07/49/21/07/360_F_749210788_1LKxjjOHZPsJZwDOclb8D0Y5UsT20blt.jpg');
     };
     
     updateBg();

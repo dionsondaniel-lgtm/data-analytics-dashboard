@@ -9,8 +9,8 @@ interface SettingsProps {
 export const Settings: React.FC<SettingsProps> = ({ onSave }) => {
   const [gids, setGids] = useState<Array<{ key: string; value: string }>>([]);
   const [isSaved, setIsSaved] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [bgImage, setBgImage] = useState('');
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const [bgImage, setBgImage] = useState('https://t4.ftcdn.net/jpg/07/49/21/07/360_F_749210788_1LKxjjOHZPsJZwDOclb8D0Y5UsT20blt.jpg');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -21,8 +21,8 @@ export const Settings: React.FC<SettingsProps> = ({ onSave }) => {
     setGids(gidArray);
 
     // Load UI settings
-    setTheme((localStorage.getItem('app_theme') as 'light' | 'dark') || 'light');
-    setBgImage(localStorage.getItem('app_bg') || '');
+    setTheme((localStorage.getItem('app_theme') as 'light' | 'dark') || 'dark');
+    setBgImage(localStorage.getItem('app_bg') || 'https://t4.ftcdn.net/jpg/07/49/21/07/360_F_749210788_1LKxjjOHZPsJZwDOclb8D0Y5UsT20blt.jpg');
   }, []);
 
   const handleValueChange = (index: number, newValue: string) => {

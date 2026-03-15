@@ -47,7 +47,7 @@ export default function App() {
   // Apply theme on initial load and listen for changes
   useEffect(() => {
     const applyTheme = () => {
-      const theme = localStorage.getItem('app_theme') || 'light';
+      const theme = localStorage.getItem('app_theme') || 'dark';
       if (theme === 'dark') {
         document.documentElement.classList.add('dark');
       } else {

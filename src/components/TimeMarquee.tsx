@@ -75,16 +75,16 @@ export const TimeMarquee: React.FC = () => {
   const duplicatedCards = [...cards, ...cards, ...cards, ...cards];
 
   return (
-    <div className="w-full overflow-hidden py-3 bg-white/60 dark:bg-gray-900/60 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50 shadow-sm z-20">
-      <div className="flex w-max animate-marquee space-x-6 px-4">
+    <div className="w-full overflow-hidden py-2 bg-white/60 dark:bg-gray-900/60 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50 shadow-sm z-20">
+      <div className="flex w-max animate-marquee space-x-4 px-4">
         {duplicatedCards.map((card, idx) => (
           <div 
             key={`${card.id}-${idx}`}
-            className={`relative flex-none w-72 flex items-center p-3.5 rounded-2xl border ${card.border} ${card.bg} shadow-sm backdrop-blur-xl mx-2 transition-all duration-500 hover:-translate-y-1 hover:shadow-md group overflow-hidden`}
+            className={`relative flex-none w-60 flex items-center p-2.5 rounded-xl border ${card.border} ${card.bg} shadow-sm backdrop-blur-xl mx-1.5 transition-all duration-500 hover:-translate-y-0.5 hover:shadow-md group overflow-hidden`}
           >
             {/* Map Silhouette Background */}
             {card.mapUrl && (
-              <div className="absolute -right-4 -bottom-4 w-32 h-32 opacity-[0.08] dark:opacity-[0.15] pointer-events-none transition-transform duration-700 group-hover:scale-110 group-hover:rotate-6">
+              <div className="absolute -right-3 -bottom-3 w-24 h-24 opacity-[0.08] dark:opacity-[0.15] pointer-events-none transition-transform duration-700 group-hover:scale-110 group-hover:rotate-6">
                 <img 
                   src={card.mapUrl} 
                   alt="Map" 
@@ -97,25 +97,25 @@ export const TimeMarquee: React.FC = () => {
             {/* Accent Line */}
             <div className={`absolute left-0 top-0 bottom-0 w-1 ${card.accent} opacity-70`} />
 
-            <div className="flex-shrink-0 mr-4 relative z-10">
-              <div className="p-2.5 bg-slate-100 dark:bg-slate-800/50 rounded-xl border border-slate-200/50 dark:border-slate-700/50 shadow-inner">
-                {card.icon}
+            <div className="flex-shrink-0 mr-3 relative z-10">
+              <div className="p-2 bg-slate-100 dark:bg-slate-800/50 rounded-lg border border-slate-200/50 dark:border-slate-700/50 shadow-inner">
+                {React.cloneElement(card.icon as React.ReactElement, { className: "w-4 h-4 text-slate-700 dark:text-slate-300" })}
               </div>
               {card.flagUrl && (
-                <div className="absolute -bottom-2 -right-2 w-7 h-7 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div className="absolute -bottom-1.5 -right-1.5 w-5 h-5 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                   <img src={card.flagUrl} alt="Flag" className="w-full h-full object-cover" />
                 </div>
               )}
             </div>
             
             <div className="flex flex-col z-10">
-              <div className="flex items-center space-x-1.5 mb-0.5">
-                {card.flagUrl && <MapPin className="w-3 h-3 text-slate-400" />}
-                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em]">
+              <div className="flex items-center space-x-1 mb-0.5">
+                {card.flagUrl && <MapPin className="w-2.5 h-2.5 text-slate-400" />}
+                <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.15em]">
                   {card.title}
                 </span>
               </div>
-              <span className="text-xl font-black tracking-tight text-slate-800 dark:text-slate-100">
+              <span className="text-lg font-black tracking-tight text-slate-800 dark:text-slate-100">
                 {card.value}
               </span>
             </div>
