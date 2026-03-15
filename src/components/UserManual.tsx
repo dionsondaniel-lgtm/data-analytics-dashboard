@@ -27,7 +27,7 @@ export const UserManual: React.FC = () => {
                   <Smartphone size={32} />
                 </div>
                 <p className="text-slate-600 dark:text-slate-300 mb-4">
-                  Add TTSP Analyst Dashboard to your home screen for quick access and a full-screen experience.
+                  Add Data Analytics Dashboard to your home screen for quick access and a full-screen experience.
                 </p>
               </div>
 
