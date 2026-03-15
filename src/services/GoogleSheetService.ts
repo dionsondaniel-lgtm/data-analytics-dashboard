@@ -73,7 +73,7 @@ export const saveStoredGIDs = (gids: Record<string, string>) => {
   localStorage.setItem('dashboard_sheet_gids', JSON.stringify(gids));
 };
 
-export const fetchSheetData = async (sheetName: string): Promise<any[]> => {
+export const fetchSheetData = async (sheetName: string, retries = 3): Promise<any[]> => {
   const gids = getStoredGIDs();
   const gid = gids[sheetName];
   if (!gid) {
@@ -83,44 +83,58 @@ export const fetchSheetData = async (sheetName: string): Promise<any[]> => {
 
   const url = `${BASE_URL}${gid}`;
 
-  return new Promise((resolve) => {
-    Papa.parse(url, {
-      download: true,
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        // If the response is HTML (e.g., error page for invalid GID), it might parse as a single column with HTML tags
-        if (results.data && results.data.length > 0) {
-          const firstRow = results.data[0] as any;
-          const keys = Object.keys(firstRow);
-          if (keys.length > 0) {
-            const firstKey = keys[0].trim().toLowerCase();
-            if (firstKey.includes('<!doctype html') || firstKey.includes('<html') || firstKey.includes('google.com')) {
-              console.warn(`Sheet ${sheetName} returned HTML instead of CSV. Check the GID.`);
-              resolve([]);
-              return;
+  const attemptFetch = async (attempt: number): Promise<any[]> => {
+    return new Promise((resolve, reject) => {
+      Papa.parse(url, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          if (results.data && results.data.length > 0) {
+            const firstRow = results.data[0] as any;
+            const keys = Object.keys(firstRow);
+            if (keys.length > 0) {
+              const firstKey = keys[0].trim().toLowerCase();
+              if (firstKey.includes('<!doctype html') || firstKey.includes('<html') || firstKey.includes('google.com')) {
+                console.warn(`Sheet ${sheetName} returned HTML instead of CSV. Check the GID.`);
+                resolve([]);
+                return;
+              }
             }
           }
-        }
 
-        // Trim all string values
-        const cleanedData = results.data.map((row: any) => {
-          const cleanedRow: any = {};
-          for (const key in row) {
-            if (Object.prototype.hasOwnProperty.call(row, key)) {
-              const value = row[key];
-              const cleanedKey = key.trim();
-              cleanedRow[cleanedKey] = typeof value === 'string' ? value.trim() : value;
+          const cleanedData = results.data.map((row: any) => {
+            const cleanedRow: any = {};
+            for (const key in row) {
+              if (Object.prototype.hasOwnProperty.call(row, key)) {
+                const value = row[key];
+                const cleanedKey = key.trim();
+                cleanedRow[cleanedKey] = typeof value === 'string' ? value.trim() : value;
+              }
             }
-          }
-          return cleanedRow;
-        });
-        resolve(cleanedData);
-      },
-      error: (error) => {
-        console.error(`Error fetching sheet ${sheetName}:`, error);
-        resolve([]); // Resolve with empty array to prevent app crash
-      }
+            return cleanedRow;
+          });
+          resolve(cleanedData);
+        },
+        error: (error) => {
+          reject(error);
+        }
+      });
     });
-  });
+  };
+
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await attemptFetch(i);
+    } catch (error) {
+      console.warn(`Attempt ${i + 1} failed for sheet ${sheetName}:`, error);
+      if (i === retries - 1) {
+        console.error(`Error fetching sheet ${sheetName}:`, error);
+        return [];
+      }
+      // Exponential backoff
+      await new Promise(res => setTimeout(res, Math.pow(2, i) * 1000 + Math.random() * 1000));
+    }
+  }
+  return [];
 };

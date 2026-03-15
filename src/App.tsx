@@ -159,7 +159,7 @@ export default function App() {
       const pracData: TransformedPractice[] = [];
       const projData: TransformedProject[] = [];
 
-      const fetchPromises: Promise<void>[] = [];
+      const fetchTasks: (() => Promise<void>)[] = [];
 
       for (const [key, gid] of Object.entries(gids)) {
         if (!gid || typeof gid !== 'string' || gid.trim() === '') continue;
@@ -169,7 +169,7 @@ export default function App() {
         if (attMatch) {
           const mod = attMatch[1];
           const cohort = attMatch[2].toUpperCase();
-          fetchPromises.push(
+          fetchTasks.push(() =>
             fetchSheetData(key).then(raw => {
               attData.push(...transformAttendance(raw, mod, cohort));
             })
@@ -182,7 +182,7 @@ export default function App() {
         if (cpMatch) {
           const mod = cpMatch[1];
           const cohort = cpMatch[2].toUpperCase();
-          fetchPromises.push(
+          fetchTasks.push(() =>
             fetchSheetData(key).then(raw => {
               pracData.push(...transformPractice(raw, mod, 'Class Practice', cohort));
             })
@@ -195,7 +195,7 @@ export default function App() {
         if (hpMatch) {
           const mod = hpMatch[1];
           const cohort = hpMatch[2].toUpperCase();
-          fetchPromises.push(
+          fetchTasks.push(() =>
             fetchSheetData(key).then(raw => {
               pracData.push(...transformPractice(raw, mod, 'Home Practice', cohort));
             })
@@ -207,7 +207,7 @@ export default function App() {
         const projMatch = key.match(/^Summary\s+Projects?\s+to\s+BQ\s*-\s*([A-Za-z0-9]+)$/i);
         if (projMatch) {
           const cohort = projMatch[1].toUpperCase();
-          fetchPromises.push(
+          fetchTasks.push(() =>
             fetchSheetData(key).then(raw => {
               projData.push(...transformProjects(raw, cohort));
             })
@@ -216,7 +216,12 @@ export default function App() {
         }
       }
 
-      await Promise.all(fetchPromises);
+      // Execute in batches of 5 to prevent rate limiting
+      const BATCH_SIZE = 5;
+      for (let i = 0; i < fetchTasks.length; i += BATCH_SIZE) {
+        const batch = fetchTasks.slice(i, i + BATCH_SIZE);
+        await Promise.all(batch.map(task => task()));
+      }
 
       setAttendanceData(attData);
       setPracticeData(pracData);

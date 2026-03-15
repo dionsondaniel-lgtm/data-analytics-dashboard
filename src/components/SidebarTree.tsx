@@ -138,7 +138,6 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({
         </div>
 
         <div className="pt-2 pb-2">
-          <NavItem icon={Briefcase} label="Profiles" active={currentView === 'Profiles'} onClick={() => { onSelectView('Profiles'); onMobileClose?.(); }} />
           <NavItem icon={Sparkles} label="Projecters" active={currentView === 'Projecters'} onClick={() => { onSelectView('Projecters'); onMobileClose?.(); }} />
         </div>
 
@@ -154,6 +153,7 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({
 
         {isUnlocked && (
           <div className="pt-2 space-y-1 border-t border-gray-200 dark:border-gray-800 animate-in fade-in slide-in-from-top-2 duration-300">
+            <NavItem icon={Briefcase} label="Profiles" active={currentView === 'Profiles'} onClick={() => { onSelectView('Profiles'); onMobileClose?.(); }} />
             <NavItem icon={CheckSquare} label="Attendance" active={currentView === 'Attendance'} onClick={() => { onSelectView('Attendance'); onMobileClose?.(); }} />
             <NavItem icon={FileText} label="Class Practice" active={currentView === 'Class Practice'} onClick={() => { onSelectView('Class Practice'); onMobileClose?.(); }} />
             <NavItem icon={Home} label="Home Practice" active={currentView === 'Home Practice'} onClick={() => { onSelectView('Home Practice'); onMobileClose?.(); }} />
