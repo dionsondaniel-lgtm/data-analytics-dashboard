@@ -8,6 +8,8 @@ import { DataTable } from './components/DataTable';
 import { Settings } from './components/Settings';
 import { UserManual } from './components/UserManual';
 import { AutoReport } from './components/AutoReport';
+import Projecters from './components/Projecters';
+import { TimeMarquee } from './components/TimeMarquee';
 import { fetchSheetData, getStoredGIDs } from './services/GoogleSheetService';
 import { transformAttendance, transformPractice, transformProjects, calculateOverallMetrics } from './services/DataTransformer';
 import { AppState, ViewType, TransformedAttendance, TransformedPractice, TransformedProject, Learner, AlumniProject, AllCohortsPhoto, CohortImage } from './types';
@@ -397,12 +399,16 @@ export default function App() {
         return <ImageGrid alumniProjects={alumniProjects} />;
       case 'Profiles':
         return <Profiles learners={filteredLearners} cohortPhotos={cohortPhotos} alumniProjects={alumniProjects} cohortImages={cohortImages} />;
+      case 'Projecters':
+        return <Projecters />;
       case 'Learners Detail':
         return <DataTable columns={['NAME', 'COMPANY', 'DESIGNATION', 'Address', 'Cellphone_No', 'Email_Add', 'LinkedIn_url', 'Facebook_url', 'COHORT_NO']} data={filteredLearners} />;
       default:
         return <div>Select a view from the sidebar.</div>;
     }
   };
+
+  const subHeader = state.currentView === 'Overview' ? <TimeMarquee /> : undefined;
 
   return (
     <>
@@ -415,6 +421,7 @@ export default function App() {
         onSelectModule={handleSelectModule}
         availableCohorts={availableCohorts.length > 0 ? availableCohorts : undefined}
         headerActions={headerActions}
+        subHeader={subHeader}
       >
         {renderContent()}
       </DashboardLayout>

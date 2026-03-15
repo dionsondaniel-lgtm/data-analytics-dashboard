@@ -14,6 +14,7 @@ interface DashboardLayoutProps {
   onSelectModule: (module: string | null) => void;
   availableCohorts?: string[];
   headerActions?: ReactNode;
+  subHeader?: ReactNode;
 }
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
@@ -25,7 +26,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   onSelectCohort,
   onSelectModule,
   availableCohorts = ['1', '2', '3', '4', '5'],
-  headerActions
+  headerActions,
+  subHeader
 }) => {
   const [bgImage, setBgImage] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768);
@@ -111,7 +113,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           />
         </div>
         <div className="flex-1 flex flex-col overflow-hidden w-full">
-          <header className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between transition-colors">
+          <header className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between transition-colors z-20">
             <div className="flex items-center space-x-4">
               <h1 className="text-2xl font-semibold text-gray-900 dark:text-white ml-2 md:ml-0">
                 {currentView} {selectedCohort ? `- Cohort ${selectedCohort}` : ''} {selectedModule ? `- ${selectedModule}` : ''}
@@ -123,7 +125,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
             </div>
           </header>
-          <main className="flex-1 overflow-y-auto p-4 sm:p-6 scrollbar-elegant">
+          {subHeader}
+          <main className="flex-1 overflow-y-auto p-4 sm:p-6 scrollbar-elegant z-10">
             <div className="max-w-7xl mx-auto space-y-6">
               {children}
             </div>

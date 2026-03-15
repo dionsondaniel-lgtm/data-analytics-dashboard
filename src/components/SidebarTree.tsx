@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronRight, ChevronDown, LayoutDashboard, Users, BookOpen, CheckSquare, Home, Award, Image as ImageIcon, FileText, Settings, HelpCircle, Briefcase } from 'lucide-react';
+import { ChevronRight, ChevronDown, LayoutDashboard, Users, BookOpen, CheckSquare, Home, Award, Image as ImageIcon, FileText, Settings, HelpCircle, Briefcase, Gem, Unlock, Sparkles } from 'lucide-react';
 import { ViewType } from '../types';
 import { clsx } from 'clsx';
 
@@ -26,6 +26,20 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({
 }) => {
   const [expandedCohorts, setExpandedCohorts] = useState<boolean>(true);
   const [expandedModules, setExpandedModules] = useState<boolean>(true);
+  const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
+
+  const handleUnlockClick = () => {
+    if (isUnlocked) {
+      setIsUnlocked(false);
+    } else {
+      const pass = prompt("Enter password to unlock hidden tabs:");
+      if (pass === "Elite7") {
+        setIsUnlocked(true);
+      } else if (pass !== null) {
+        alert("Incorrect password");
+      }
+    }
+  };
 
   const NavItem = ({ icon: Icon, label, active, onClick, indent = false }: any) => (
     <button
@@ -71,7 +85,7 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({
           {expandedCohorts && availableCohorts.map(cohort => (
             <button
               key={cohort}
-              onClick={() => onSelectCohort(cohort)}
+              onClick={() => onSelectCohort(selectedCohort === cohort ? null : cohort)}
               className={clsx(
                 "w-full flex items-center pl-12 pr-4 py-2 text-sm font-medium rounded-md transition-colors",
                 selectedCohort === cohort ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
@@ -96,7 +110,7 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({
           {expandedModules && modules.map(mod => (
             <button
               key={mod}
-              onClick={() => onSelectModule(mod)}
+              onClick={() => onSelectModule(selectedModule === mod ? null : mod)}
               className={clsx(
                 "w-full flex items-center pl-12 pr-4 py-2 text-sm font-medium rounded-md transition-colors",
                 selectedModule === mod ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
@@ -109,16 +123,29 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({
 
         <div className="pt-2 pb-2">
           <NavItem icon={Briefcase} label="Profiles" active={currentView === 'Profiles'} onClick={() => onSelectView('Profiles')} />
+          <NavItem icon={Sparkles} label="Projecters" active={currentView === 'Projecters'} onClick={() => onSelectView('Projecters')} />
         </div>
 
-        <div className="pt-4 space-y-1 border-t border-gray-200 dark:border-gray-800">
-          <NavItem icon={CheckSquare} label="Attendance" active={currentView === 'Attendance'} onClick={() => onSelectView('Attendance')} />
-          <NavItem icon={FileText} label="Class Practice" active={currentView === 'Class Practice'} onClick={() => onSelectView('Class Practice')} />
-          <NavItem icon={Home} label="Home Practice" active={currentView === 'Home Practice'} onClick={() => onSelectView('Home Practice')} />
-          <NavItem icon={Award} label="Summary Projects" active={currentView === 'Summary Projects'} onClick={() => onSelectView('Summary Projects')} />
-          <NavItem icon={ImageIcon} label="Alumni Projects" active={currentView === 'Alumni Projects'} onClick={() => onSelectView('Alumni Projects')} />
-          <NavItem icon={Users} label="Learners Detail" active={currentView === 'Learners Detail'} onClick={() => onSelectView('Learners Detail')} />
+        <div className="pt-2 pb-2 flex justify-center">
+          <button 
+            onClick={handleUnlockClick}
+            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-amber-500 dark:text-amber-400 animate-pulse hover:animate-none"
+            title={isUnlocked ? "Lock hidden tabs" : "Unlock hidden tabs"}
+          >
+            {isUnlocked ? <Unlock className="w-5 h-5" /> : <Gem className="w-5 h-5" />}
+          </button>
         </div>
+
+        {isUnlocked && (
+          <div className="pt-2 space-y-1 border-t border-gray-200 dark:border-gray-800 animate-in fade-in slide-in-from-top-2 duration-300">
+            <NavItem icon={CheckSquare} label="Attendance" active={currentView === 'Attendance'} onClick={() => onSelectView('Attendance')} />
+            <NavItem icon={FileText} label="Class Practice" active={currentView === 'Class Practice'} onClick={() => onSelectView('Class Practice')} />
+            <NavItem icon={Home} label="Home Practice" active={currentView === 'Home Practice'} onClick={() => onSelectView('Home Practice')} />
+            <NavItem icon={Award} label="Summary Projects" active={currentView === 'Summary Projects'} onClick={() => onSelectView('Summary Projects')} />
+            <NavItem icon={ImageIcon} label="Alumni Projects" active={currentView === 'Alumni Projects'} onClick={() => onSelectView('Alumni Projects')} />
+            <NavItem icon={Users} label="Learners Detail" active={currentView === 'Learners Detail'} onClick={() => onSelectView('Learners Detail')} />
+          </div>
+        )}
 
         <div className="pt-4 space-y-1 border-t border-gray-200 dark:border-gray-800">
           <h3 className="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">App Configuration</h3>
