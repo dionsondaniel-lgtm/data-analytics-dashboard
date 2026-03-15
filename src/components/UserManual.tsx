@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Settings as SettingsIcon, Filter, Database, FileSpreadsheet } from 'lucide-react';
+import { BookOpen, Settings as SettingsIcon, Filter, Database, FileSpreadsheet, Smartphone, Share, Settings } from 'lucide-react';
 
 export const UserManual: React.FC = () => {
   return (
@@ -17,8 +17,51 @@ export const UserManual: React.FC = () => {
       <div className="space-y-8">
         <section className="space-y-4">
           <h2 className="text-2xl font-semibold text-gray-900 dark:text-white flex items-center border-b border-gray-100 dark:border-gray-700 pb-2">
+            <Smartphone className="h-6 w-6 mr-3 text-purple-500" />
+            1. Install as an App (PWA)
+          </h2>
+          <div className="prose prose-indigo dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
+            <div className="space-y-6">
+              <div className="flex flex-col items-center text-center">
+                <div className="p-4 bg-blue-100 dark:bg-blue-900/20 rounded-full mb-4 text-blue-600">
+                  <Smartphone size={32} />
+                </div>
+                <p className="text-slate-600 dark:text-slate-300 mb-4">
+                  Add TTSP Analyst Dashboard to your home screen for quick access and a full-screen experience.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+                  <h4 className="font-bold mb-4 flex items-center gap-2 dark:text-white text-lg">
+                    <span className="text-blue-500"><Share size={20} /></span> iOS (iPhone/iPad)
+                  </h4>
+                  <ol className="list-decimal pl-5 text-slate-600 dark:text-slate-400 space-y-2">
+                    <li>Tap the <strong>Share</strong> button in Safari's menu bar.</li>
+                    <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
+                    <li>Tap <strong>Add</strong> in the top right corner.</li>
+                  </ol>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+                  <h4 className="font-bold mb-4 flex items-center gap-2 dark:text-white text-lg">
+                    <span className="text-green-500"><Settings size={20} /></span> Android (Chrome)
+                  </h4>
+                  <ol className="list-decimal pl-5 text-slate-600 dark:text-slate-400 space-y-2">
+                    <li>Tap the <strong>Three Dots</strong> menu in the browser.</li>
+                    <li>Tap <strong>Install App</strong> or <strong>Add to Home Screen</strong>.</li>
+                    <li>Confirm by tapping <strong>Add</strong>.</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white flex items-center border-b border-gray-100 dark:border-gray-700 pb-2">
             <Database className="h-6 w-6 mr-3 text-indigo-500 dark:text-indigo-400" />
-            1. Introduction
+            2. Introduction
           </h2>
           <div className="prose prose-indigo dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
             <p>
@@ -33,7 +76,7 @@ export const UserManual: React.FC = () => {
         <section className="space-y-4">
           <h2 className="text-2xl font-semibold text-gray-900 dark:text-white flex items-center border-b border-gray-100 dark:border-gray-700 pb-2">
             <SettingsIcon className="h-6 w-6 mr-3 text-indigo-500 dark:text-indigo-400" />
-            2. Setting up GIDs
+            3. Setting up GIDs
           </h2>
           <div className="prose prose-indigo dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
             <p>
@@ -64,7 +107,7 @@ export const UserManual: React.FC = () => {
         <section className="space-y-4">
           <h2 className="text-2xl font-semibold text-gray-900 dark:text-white flex items-center border-b border-gray-100 dark:border-gray-700 pb-2">
             <Filter className="h-6 w-6 mr-3 text-indigo-500 dark:text-indigo-400" />
-            3. Filtering and Reporting
+            4. Filtering and Reporting
           </h2>
           <div className="prose prose-indigo dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
             <p>

@@ -11,6 +11,7 @@ interface SidebarTreeProps {
   onSelectCohort: (cohort: string | null) => void;
   onSelectModule: (module: string | null) => void;
   availableCohorts?: string[];
+  onMobileClose?: () => void;
 }
 
 const modules = ['SQL', 'Excel', 'PBI', 'Python'];
@@ -22,7 +23,8 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({
   onSelectView,
   onSelectCohort,
   onSelectModule,
-  availableCohorts = ['1', '2', '3', '4', '5']
+  availableCohorts = ['1', '2', '3', '4', '5'],
+  onMobileClose
 }) => {
   const [expandedCohorts, setExpandedCohorts] = useState<boolean>(true);
   const [expandedModules, setExpandedModules] = useState<boolean>(true);
@@ -68,7 +70,7 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({
           icon={LayoutDashboard} 
           label="App Overview" 
           active={currentView === 'Overview'} 
-          onClick={() => { onSelectView('Overview'); onSelectCohort(null); onSelectModule(null); }} 
+          onClick={() => { onSelectView('Overview'); onSelectCohort(null); onSelectModule(null); onMobileClose?.(); }} 
         />
         
         <div className="pt-4 pb-2">
@@ -85,7 +87,14 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({
           {expandedCohorts && availableCohorts.map(cohort => (
             <button
               key={cohort}
-              onClick={() => onSelectCohort(selectedCohort === cohort ? null : cohort)}
+              onClick={() => {
+                if (window.innerWidth < 1024) {
+                  onSelectCohort(cohort);
+                  onMobileClose?.();
+                } else {
+                  onSelectCohort(selectedCohort === cohort ? null : cohort);
+                }
+              }}
               className={clsx(
                 "w-full flex items-center pl-12 pr-4 py-2 text-sm font-medium rounded-md transition-colors",
                 selectedCohort === cohort ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
@@ -110,7 +119,14 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({
           {expandedModules && modules.map(mod => (
             <button
               key={mod}
-              onClick={() => onSelectModule(selectedModule === mod ? null : mod)}
+              onClick={() => {
+                if (window.innerWidth < 1024) {
+                  onSelectModule(mod);
+                  onMobileClose?.();
+                } else {
+                  onSelectModule(selectedModule === mod ? null : mod);
+                }
+              }}
               className={clsx(
                 "w-full flex items-center pl-12 pr-4 py-2 text-sm font-medium rounded-md transition-colors",
                 selectedModule === mod ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
@@ -122,8 +138,8 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({
         </div>
 
         <div className="pt-2 pb-2">
-          <NavItem icon={Briefcase} label="Profiles" active={currentView === 'Profiles'} onClick={() => onSelectView('Profiles')} />
-          <NavItem icon={Sparkles} label="Projecters" active={currentView === 'Projecters'} onClick={() => onSelectView('Projecters')} />
+          <NavItem icon={Briefcase} label="Profiles" active={currentView === 'Profiles'} onClick={() => { onSelectView('Profiles'); onMobileClose?.(); }} />
+          <NavItem icon={Sparkles} label="Projecters" active={currentView === 'Projecters'} onClick={() => { onSelectView('Projecters'); onMobileClose?.(); }} />
         </div>
 
         <div className="pt-2 pb-2 flex justify-center">
@@ -138,12 +154,12 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({
 
         {isUnlocked && (
           <div className="pt-2 space-y-1 border-t border-gray-200 dark:border-gray-800 animate-in fade-in slide-in-from-top-2 duration-300">
-            <NavItem icon={CheckSquare} label="Attendance" active={currentView === 'Attendance'} onClick={() => onSelectView('Attendance')} />
-            <NavItem icon={FileText} label="Class Practice" active={currentView === 'Class Practice'} onClick={() => onSelectView('Class Practice')} />
-            <NavItem icon={Home} label="Home Practice" active={currentView === 'Home Practice'} onClick={() => onSelectView('Home Practice')} />
-            <NavItem icon={Award} label="Summary Projects" active={currentView === 'Summary Projects'} onClick={() => onSelectView('Summary Projects')} />
-            <NavItem icon={ImageIcon} label="Alumni Projects" active={currentView === 'Alumni Projects'} onClick={() => onSelectView('Alumni Projects')} />
-            <NavItem icon={Users} label="Learners Detail" active={currentView === 'Learners Detail'} onClick={() => onSelectView('Learners Detail')} />
+            <NavItem icon={CheckSquare} label="Attendance" active={currentView === 'Attendance'} onClick={() => { onSelectView('Attendance'); onMobileClose?.(); }} />
+            <NavItem icon={FileText} label="Class Practice" active={currentView === 'Class Practice'} onClick={() => { onSelectView('Class Practice'); onMobileClose?.(); }} />
+            <NavItem icon={Home} label="Home Practice" active={currentView === 'Home Practice'} onClick={() => { onSelectView('Home Practice'); onMobileClose?.(); }} />
+            <NavItem icon={Award} label="Summary Projects" active={currentView === 'Summary Projects'} onClick={() => { onSelectView('Summary Projects'); onMobileClose?.(); }} />
+            <NavItem icon={ImageIcon} label="Alumni Projects" active={currentView === 'Alumni Projects'} onClick={() => { onSelectView('Alumni Projects'); onMobileClose?.(); }} />
+            <NavItem icon={Users} label="Learners Detail" active={currentView === 'Learners Detail'} onClick={() => { onSelectView('Learners Detail'); onMobileClose?.(); }} />
           </div>
         )}
 

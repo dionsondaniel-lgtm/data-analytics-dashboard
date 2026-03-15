@@ -110,6 +110,11 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             onSelectCohort={onSelectCohort}
             onSelectModule={onSelectModule}
             availableCohorts={availableCohorts}
+            onMobileClose={() => {
+              if (window.innerWidth <= 768) {
+                setIsSidebarOpen(false);
+              }
+            }}
           />
         </div>
         <div className="flex-1 flex flex-col overflow-hidden w-full">
