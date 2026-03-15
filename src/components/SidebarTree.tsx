@@ -88,11 +88,9 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({
             <button
               key={cohort}
               onClick={() => {
-                if (window.innerWidth < 1024) {
-                  onSelectCohort(cohort);
+                onSelectCohort(selectedCohort === cohort ? null : cohort);
+                if (window.innerWidth < 768) {
                   onMobileClose?.();
-                } else {
-                  onSelectCohort(selectedCohort === cohort ? null : cohort);
                 }
               }}
               className={clsx(
@@ -120,11 +118,9 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({
             <button
               key={mod}
               onClick={() => {
-                if (window.innerWidth < 1024) {
-                  onSelectModule(mod);
+                onSelectModule(selectedModule === mod ? null : mod);
+                if (window.innerWidth < 768) {
                   onMobileClose?.();
-                } else {
-                  onSelectModule(selectedModule === mod ? null : mod);
                 }
               }}
               className={clsx(
