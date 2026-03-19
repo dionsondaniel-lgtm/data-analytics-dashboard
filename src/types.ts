@@ -76,7 +76,7 @@ export interface OverallMetrics {
   Overall_Submission_Rate: number;
 }
 
-export type ViewType = 'Overview' | 'Attendance' | 'Class Practice' | 'Home Practice' | 'Summary Projects' | 'Alumni Projects' | 'Learners Detail' | 'Profiles' | 'Projecters' | 'Settings' | 'User Manual';
+export type ViewType = 'Portal' | 'Home' | 'Attendance' | 'Practices' | 'Projects' | 'Learners' | 'Alumni' | 'Mentors' | 'About' | 'Projecters' | 'Settings' | 'User Manual';
 
 export interface AppState {
   selectedCohort: string | null;

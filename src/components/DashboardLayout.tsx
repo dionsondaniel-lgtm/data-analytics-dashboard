@@ -1,7 +1,7 @@
 import React, { ReactNode, useEffect, useState } from 'react';
 import { SidebarTree } from './SidebarTree';
 import { ViewType } from '../types';
-import { Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Menu, X, ChevronLeft, ChevronRight, Filter, Layers, BookOpen } from 'lucide-react';
 import { clsx } from 'clsx';
 
 interface DashboardLayoutProps {
@@ -31,6 +31,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 }) => {
   const [bgImage, setBgImage] = useState('https://t4.ftcdn.net/jpg/07/49/21/07/360_F_749210788_1LKxjjOHZPsJZwDOclb8D0Y5UsT20blt.jpg');
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -131,9 +132,117 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             </div>
           </header>
           {subHeader}
-          <main className="flex-1 overflow-y-auto p-4 sm:p-6 scrollbar-elegant z-10">
+          <main className="flex-1 overflow-y-auto p-4 sm:p-6 scrollbar-elegant z-10 relative">
             <div className="max-w-7xl mx-auto space-y-6">
               {children}
+            </div>
+
+            {/* Floating Global Filters */}
+            <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+              {isFiltersOpen && (
+                <div className="mb-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl w-64 overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-300">
+                  <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/50">
+                    <h3 className="font-semibold text-sm text-gray-900 dark:text-white flex items-center">
+                      <Filter className="w-4 h-4 mr-2 text-indigo-500" />
+                      Global Filters
+                    </h3>
+                    <button 
+                      onClick={() => setIsFiltersOpen(false)}
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  
+                  <div className="p-2 max-h-80 overflow-y-auto scrollbar-elegant">
+                    {/* Cohort Filters */}
+                    <div className="mb-4">
+                      <div className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 flex items-center uppercase tracking-wider">
+                        <Layers className="w-3 h-3 mr-2" />
+                        By Cohort
+                      </div>
+                      <div className="space-y-1">
+                        <button
+                          onClick={() => onSelectCohort(null)}
+                          className={clsx(
+                            "w-full text-left px-3 py-2 text-sm rounded-md transition-colors",
+                            selectedCohort === null 
+                              ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium" 
+                              : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+                          )}
+                        >
+                          All Cohorts
+                        </button>
+                        {availableCohorts.map(cohort => (
+                          <button
+                            key={cohort}
+                            onClick={() => onSelectCohort(cohort)}
+                            className={clsx(
+                              "w-full text-left px-3 py-2 text-sm rounded-md transition-colors",
+                              selectedCohort === cohort 
+                                ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium" 
+                                : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+                            )}
+                          >
+                            Cohort {cohort}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Module Filters */}
+                    <div>
+                      <div className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 flex items-center uppercase tracking-wider">
+                        <BookOpen className="w-3 h-3 mr-2" />
+                        By Module
+                      </div>
+                      <div className="space-y-1">
+                        <button
+                          onClick={() => onSelectModule(null)}
+                          className={clsx(
+                            "w-full text-left px-3 py-2 text-sm rounded-md transition-colors",
+                            selectedModule === null 
+                              ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium" 
+                              : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+                          )}
+                        >
+                          All Modules
+                        </button>
+                        {['SQL', 'Excel', 'Power BI', 'Python'].map(module => (
+                          <button
+                            key={module}
+                            onClick={() => onSelectModule(module)}
+                            className={clsx(
+                              "w-full text-left px-3 py-2 text-sm rounded-md transition-colors",
+                              selectedModule === module 
+                                ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium" 
+                                : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+                            )}
+                          >
+                            {module}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              <button
+                onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+                className={clsx(
+                  "p-3 rounded-full shadow-lg transition-all duration-300 flex items-center justify-center",
+                  isFiltersOpen 
+                    ? "bg-gray-800 text-white hover:bg-gray-700 dark:bg-gray-200 dark:text-gray-900 dark:hover:bg-white" 
+                    : "bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105"
+                )}
+                title="Global Filters"
+              >
+                <Filter className="w-6 h-6" />
+                {(selectedCohort || selectedModule) && !isFiltersOpen && (
+                  <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 border-2 border-white dark:border-gray-900 rounded-full"></span>
+                )}
+              </button>
             </div>
           </main>
         </div>

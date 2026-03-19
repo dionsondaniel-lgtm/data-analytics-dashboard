@@ -8,6 +8,15 @@ import { DataTable } from './components/DataTable';
 import { Settings } from './components/Settings';
 import { UserManual } from './components/UserManual';
 import { AutoReport } from './components/AutoReport';
+import { Portal } from './components/Portal';
+import { Home } from './components/Home';
+import { Attendance } from './components/Attendance';
+import { Practices } from './components/Practices';
+import { Projects } from './components/Projects';
+import { Learners } from './components/Learners';
+import { Alumni } from './components/Alumni';
+import { Mentors } from './components/Mentors';
+import { About } from './components/About';
 import Projecters from './components/Projecters';
 import { TimeMarquee } from './components/TimeMarquee';
 import { fetchSheetData, getStoredGIDs } from './services/GoogleSheetService';
@@ -37,7 +46,7 @@ export default function App() {
   const [state, setState] = useState<AppState>({
     selectedCohort: null,
     selectedModule: null,
-    currentView: 'Overview'
+    currentView: 'Portal'
   });
 
   const [loading, setLoading] = useState<boolean>(true);
@@ -289,7 +298,7 @@ export default function App() {
   const filteredPrac = practiceData.filter(d => 
     (!state.selectedCohort || normalizeCohort(d.COHORT_NO) === selectedCohortNormalized) &&
     (!state.selectedModule || d.MODULE === state.selectedModule) &&
-    (state.currentView === 'Overview' || d.TYPE === state.currentView)
+    (state.currentView === 'Class Practice' || state.currentView === 'Home Practice' ? d.TYPE === state.currentView : true)
   );
 
   const filteredProj = projectData.filter(d => 
@@ -373,39 +382,26 @@ export default function App() {
 
     switch (state.currentView) {
       case 'Overview':
-        return (
-          <div id="dashboard-content" className="space-y-6 bg-white dark:bg-transparent p-1 rounded-xl">
-            <MetricsOverview metrics={metrics} />
-            <RechartsViews 
-              attendanceData={filteredAtt} 
-              practiceData={filteredPrac} 
-              projectData={filteredProj}
-              learnersData={learners}
-              onSelectCohort={handleSelectCohort}
-              onSelectModule={handleSelectModule}
-              selectedCohort={state.selectedCohort}
-              selectedModule={state.selectedModule}
-            />
-            {state.selectedCohort === null && state.selectedModule === null && (
-              <div className="mt-8">
-                <ImageGrid alumniProjects={alumniProjects} cohortPhotos={cohortPhotos} horizontal={true} />
-              </div>
-            )}
-          </div>
-        );
+      case 'Portal':
+        return <Portal metrics={metrics} onNavigate={handleSelectView} currentView={state.currentView} />;
+      case 'Home':
+        return <Home metrics={metrics} learners={filteredLearners} attendanceData={filteredAtt} practiceData={filteredPrac} projectData={filteredProj} onNavigate={handleSelectView} currentView={state.currentView} />;
       case 'Attendance':
-        return <DataTable columns={['NAME', 'COHORT_NO', 'MODULE', 'Total_Lesson_Sum', 'Overall_Sum', 'Attendance_Rate']} data={filteredAtt} />;
-      case 'Class Practice':
-      case 'Home Practice':
-        return <DataTable columns={['NAME', 'COHORT_NO', 'MODULE', 'TYPE', 'Total_Required', 'Total_Submitted', 'Rate_of_Submission', 'Average_DayDiff']} data={filteredPrac} />;
-      case 'Summary Projects':
-        return <DataTable columns={['NAME', 'COHORT_NO', 'MODULE', 'Status', 'DayDiff', 'GPA']} data={filteredProj} />;
-      case 'Alumni Projects':
-        return <ImageGrid alumniProjects={alumniProjects} />;
-      case 'Profiles':
-        return <Profiles learners={filteredLearners} cohortPhotos={cohortPhotos} alumniProjects={alumniProjects} cohortImages={cohortImages} />;
+        return <Attendance metrics={metrics} learners={filteredLearners} attendanceData={filteredAtt} cohortPhotos={cohortPhotos} onNavigate={handleSelectView} currentView={state.currentView} />;
+      case 'Practices':
+        return <Practices metrics={metrics} learners={filteredLearners} practiceData={filteredPrac} onNavigate={handleSelectView} currentView={state.currentView} />;
+      case 'Projects':
+        return <Projects metrics={metrics} learners={filteredLearners} projectData={filteredProj} alumniProjects={alumniProjects} onNavigate={handleSelectView} currentView={state.currentView} />;
+      case 'Learners':
+        return <Learners metrics={metrics} learners={filteredLearners} cohortPhotos={cohortPhotos} onNavigate={handleSelectView} currentView={state.currentView} />;
+      case 'Alumni':
+        return <Alumni metrics={metrics} learners={filteredLearners} cohortPhotos={cohortPhotos} onNavigate={handleSelectView} currentView={state.currentView} />;
+      case 'Mentors':
+        return <Mentors metrics={metrics} learners={filteredLearners} cohortPhotos={cohortPhotos} onNavigate={handleSelectView} currentView={state.currentView} />;
+      case 'About':
+        return <About metrics={metrics} learners={filteredLearners} cohortPhotos={cohortPhotos} onNavigate={handleSelectView} currentView={state.currentView} />;
       case 'Projecters':
-        return <Projecters />;
+        return <Projecters onNavigate={handleSelectView} currentView={state.currentView} />;
       case 'Learners Detail':
         return <DataTable columns={['NAME', 'COMPANY', 'DESIGNATION', 'Address', 'Cellphone_No', 'Email_Add', 'LinkedIn_url', 'Facebook_url', 'COHORT_NO']} data={filteredLearners} />;
       default:
@@ -413,7 +409,7 @@ export default function App() {
     }
   };
 
-  const subHeader = state.currentView === 'Overview' ? <TimeMarquee /> : undefined;
+  const subHeader = state.currentView === 'Portal' ? <TimeMarquee /> : undefined;
 
   return (
     <>
