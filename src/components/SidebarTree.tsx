@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Home, CheckSquare, FileText, Award, Users, Image as ImageIcon, Briefcase, Info, Sparkles, Settings, HelpCircle, Gem, Unlock } from 'lucide-react';
+import { 
+  LayoutDashboard, Home, CheckSquare, FileText, 
+  Award, Users, Image as ImageIcon, Briefcase, 
+  Info, Sparkles, Settings, HelpCircle, Gem, 
+  Unlock, Table as TableIcon, UserCircle, ClipboardList 
+} from 'lucide-react';
 import { ViewType } from '../types';
 import { clsx } from 'clsx';
 
@@ -14,13 +19,14 @@ interface SidebarTreeProps {
   onMobileClose?: () => void;
 }
 
-const NavItem = ({ icon: Icon, label, active, onClick, indent = false }: any) => (
+const NavItem = ({ icon: Icon, label, active, onClick }: any) => (
   <button
     onClick={onClick}
     className={clsx(
       "w-full flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors",
-      active ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white",
-      indent ? "pl-8" : ""
+      active 
+        ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300" 
+        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
     )}
   >
     <Icon className={clsx("mr-3 h-5 w-5", active ? "text-indigo-500 dark:text-indigo-400" : "text-gray-400 dark:text-gray-500")} />
@@ -30,12 +36,7 @@ const NavItem = ({ icon: Icon, label, active, onClick, indent = false }: any) =>
 
 export const SidebarTree: React.FC<SidebarTreeProps> = ({
   currentView,
-  selectedCohort,
-  selectedModule,
   onSelectView,
-  onSelectCohort,
-  onSelectModule,
-  availableCohorts = [],
   onMobileClose
 }) => {
   const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
@@ -61,7 +62,10 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({
           Data Dashboard
         </h2>
       </div>
+      
       <nav className="flex-1 px-2 py-4 space-y-1">
+        {/* --- MAIN DASHBOARDS SECTION --- */}
+        <h3 className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Main Views</h3>
         <NavItem icon={LayoutDashboard} label="Portal" active={currentView === 'Portal'} onClick={() => { onSelectView('Portal'); onMobileClose?.(); }} />
         <NavItem icon={Home} label="Home" active={currentView === 'Home'} onClick={() => { onSelectView('Home'); onMobileClose?.(); }} />
         <NavItem icon={CheckSquare} label="Attendance" active={currentView === 'Attendance'} onClick={() => { onSelectView('Attendance'); onMobileClose?.(); }} />
@@ -70,23 +74,37 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({
         <NavItem icon={Users} label="Learners" active={currentView === 'Learners'} onClick={() => { onSelectView('Learners'); onMobileClose?.(); }} />
         <NavItem icon={ImageIcon} label="Alumni" active={currentView === 'Alumni'} onClick={() => { onSelectView('Alumni'); onMobileClose?.(); }} />
         <NavItem icon={Briefcase} label="Mentors" active={currentView === 'Mentors'} onClick={() => { onSelectView('Mentors'); onMobileClose?.(); }} />
-        <NavItem icon={Info} label="About" active={currentView === 'About'} onClick={() => { onSelectView('About'); onMobileClose?.(); }} />
         <NavItem icon={Sparkles} label="Projecters" active={currentView === 'Projecters'} onClick={() => { onSelectView('Projecters'); onMobileClose?.(); }} />
+        <NavItem icon={Info} label="About" active={currentView === 'About'} onClick={() => { onSelectView('About'); onMobileClose?.(); }} />
 
+        {/* Lock/Unlock Toggle */}
         <div className="pt-2 pb-2 border-t border-gray-200 dark:border-gray-800 mt-4">
           <NavItem 
             icon={isUnlocked ? Unlock : Gem} 
-            label={isUnlocked ? "Lock Settings" : "Unlock Settings"} 
+            label={isUnlocked ? "Lock Database" : "Unlock Master Database"} 
             active={false} 
             onClick={handleUnlockClick} 
           />
         </div>
 
+        {/* --- HIDDEN MASTER DATABASE SECTION --- */}
         {isUnlocked && (
           <div className="pt-2 space-y-1 animate-in fade-in slide-in-from-top-2 duration-300">
-            <h3 className="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">App Configuration</h3>
-            <NavItem icon={Settings} label="GID Settings" active={currentView === 'Settings'} onClick={() => { onSelectView('Settings'); onMobileClose?.(); }} />
-            <NavItem icon={HelpCircle} label="User Manual" active={currentView === 'User Manual'} onClick={() => { onSelectView('User Manual'); onMobileClose?.(); }} />
+            <h3 className="px-4 py-2 text-[10px] font-bold text-rose-500 uppercase tracking-widest">Master Database</h3>
+            
+            <NavItem icon={TableIcon} label="Learners Detail" active={currentView === 'Learners Detail'} onClick={() => { onSelectView('Learners Detail' as any); onMobileClose?.(); }} />
+            <NavItem icon={CheckSquare} label="Attendance Table" active={currentView === 'Attendance Table'} onClick={() => { onSelectView('Attendance Table' as any); onMobileClose?.(); }} />
+            <NavItem icon={ClipboardList} label="Class Practice" active={currentView === 'Class Practice'} onClick={() => { onSelectView('Class Practice' as any); onMobileClose?.(); }} />
+            <NavItem icon={FileText} label="Home Practice" active={currentView === 'Home Practice'} onClick={() => { onSelectView('Home Practice' as any); onMobileClose?.(); }} />
+            <NavItem icon={Award} label="Summary Projects" active={currentView === 'Summary Projects'} onClick={() => { onSelectView('Summary Projects' as any); onMobileClose?.(); }} />
+            <NavItem icon={ImageIcon} label="Alumni Projects" active={currentView === 'Alumni Projects'} onClick={() => { onSelectView('Alumni Projects' as any); onMobileClose?.(); }} />
+            <NavItem icon={UserCircle} label="Profiles" active={currentView === 'Profiles'} onClick={() => { onSelectView('Profiles' as any); onMobileClose?.(); }} />
+
+            <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
+              <h3 className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Config</h3>
+              <NavItem icon={Settings} label="GID Settings" active={currentView === 'Settings'} onClick={() => { onSelectView('Settings'); onMobileClose?.(); }} />
+              <NavItem icon={HelpCircle} label="User Manual" active={currentView === 'User Manual'} onClick={() => { onSelectView('User Manual'); onMobileClose?.(); }} />
+            </div>
           </div>
         )}
       </nav>

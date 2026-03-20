@@ -1,62 +1,71 @@
 import React, { useState, useMemo } from 'react';
-import { OverallMetrics, Learner, AllCohortsPhoto } from '../types';
+import { OverallMetrics, Learner, AllCohortsPhoto, TransformedAttendance, TransformedPractice, ViewType } from '../types';
 import { Users, BookOpen, Layers, FileText, Search, Image as ImageIcon, X, FilterX } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
 import { BottomNav } from './BottomNav';
 
 interface LearnersProps {
   metrics: OverallMetrics;
   learners: Learner[];
+  attendanceData: TransformedAttendance[]; // Added to use real sheet data
+  practiceData: TransformedPractice[];     // Added to use real sheet data
   cohortPhotos: AllCohortsPhoto[];
-  onNavigate: (view: any) => void;
-  currentView: any;
+  onNavigate: (view: ViewType) => void;
+  currentView: ViewType;
 }
 
-export const Learners: React.FC<LearnersProps> = ({ metrics, learners, cohortPhotos, onNavigate, currentView }) => {
+export const Learners: React.FC<LearnersProps> = ({ 
+  metrics, 
+  learners, 
+  attendanceData, 
+  practiceData, 
+  cohortPhotos, 
+  onNavigate, 
+  currentView 
+}) => {
   const uniqueCohorts = new Set(learners.map(l => l.COHORT_NO).filter(Boolean)).size;
-  const modules = ['SQL', 'Excel', 'Power BI', 'Python'];
+  const modules = ['SQL', 'Excel', 'PBI', 'Python'];
   const [selectedLearner, setSelectedLearner] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredLearners = learners.filter(l => l.NAME.toLowerCase().includes(searchTerm.toLowerCase()));
   const selectedPhoto = selectedLearner ? cohortPhotos.find(p => p.NAME === selectedLearner)?.IMAGE_URL : null;
 
-  const mockTrendData = useMemo(() => {
-    if (selectedLearner) {
-      // Generate pseudo-random data based on learner name length for consistency
-      const seed = selectedLearner.length;
-      return [
-        { name: 'Week 1', val: 70 + (seed * 2 % 30) },
-        { name: 'Week 2', val: 75 + (seed * 3 % 25) },
-        { name: 'Week 3', val: 80 + (seed * 4 % 20) },
-        { name: 'Week 4', val: 85 + (seed * 5 % 15) },
-      ];
-    }
-    return [
-      { name: 'Week 1', val: 80 },
-      { name: 'Week 2', val: 85 },
-      { name: 'Week 3', val: 90 },
-      { name: 'Week 4', val: 88 },
-    ];
-  }, [selectedLearner]);
+  // REAL DATA: Practice Trend (Line Chart)
+  const realTrendData = useMemo(() => {
+    return modules.map(mod => {
+      const logs = practiceData.filter(d => 
+        d.MODULE.toUpperCase().includes(mod.toUpperCase()) && 
+        (selectedLearner ? d.NAME === selectedLearner : true)
+      );
+      
+      const avgRate = logs.length > 0 
+        ? logs.reduce((sum, curr) => sum + curr.Rate_of_Submission, 0) / logs.length 
+        : 0;
 
-  const mockAbsenceData = useMemo(() => {
-    if (selectedLearner) {
-      const seed = selectedLearner.length;
-      return [
-        { name: 'SQL', val: seed % 4 },
-        { name: 'Excel', val: (seed + 1) % 3 },
-        { name: 'PBI', val: (seed + 2) % 5 },
-        { name: 'Python', val: (seed + 3) % 4 },
-      ];
-    }
-    return [
-      { name: 'SQL', val: 12 },
-      { name: 'Excel', val: 8 },
-      { name: 'PBI', val: 15 },
-      { name: 'Python', val: 10 },
-    ];
-  }, [selectedLearner]);
+      return { name: mod, val: Math.round(avgRate) };
+    });
+  }, [selectedLearner, practiceData]);
+
+  // REAL DATA: Attendance Stacked Bar (Present vs Absent)
+  const realAttendanceData = useMemo(() => {
+    return modules.map(mod => {
+      const logs = attendanceData.filter(d => 
+        d.MODULE.toUpperCase().includes(mod.toUpperCase()) && 
+        (selectedLearner ? d.NAME === selectedLearner : true)
+      );
+
+      const totalPresent = logs.reduce((sum, curr) => sum + curr.Total_Lesson_Sum, 0);
+      const totalPossible = logs.reduce((sum, curr) => sum + curr.Overall_Sum, 0);
+      const totalAbsent = Math.max(0, totalPossible - totalPresent);
+
+      return {
+        name: mod,
+        present: totalPresent,
+        absent: totalAbsent
+      };
+    });
+  }, [selectedLearner, attendanceData]);
 
   return (
     <div className="min-h-screen p-4 pb-24 space-y-6 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2071&auto=format&fit=crop")' }}>
@@ -153,10 +162,10 @@ export const Learners: React.FC<LearnersProps> = ({ metrics, learners, cohortPho
                     <div 
                       key={l.NAME} 
                       onClick={() => setSelectedLearner(l.NAME)}
-                      className={`p-3 rounded-lg cursor-pointer transition-colors ${selectedLearner === l.NAME ? 'bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800' : 'bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
+                      className={`p-3 rounded-lg cursor-pointer transition-colors ${selectedLearner === l.NAME ? 'bg-indigo-600 text-white shadow-md' : 'bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-white'}`}
                     >
-                      <p className="font-medium text-gray-900 dark:text-white text-sm">{l.NAME}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{l.COHORT_NO}</p>
+                      <p className="font-medium text-sm">{l.NAME}</p>
+                      <p className={`text-xs ${selectedLearner === l.NAME ? 'text-indigo-100' : 'text-gray-500'}`}>{l.COHORT_NO}</p>
                     </div>
                   ))}
                   {filteredLearners.length === 0 && (
@@ -181,33 +190,51 @@ export const Learners: React.FC<LearnersProps> = ({ metrics, learners, cohortPho
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1">
               <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  {selectedLearner ? `${selectedLearner}'s Practice Trend` : 'Overall Practice Trend'}
+                  {selectedLearner ? `${selectedLearner}'s Practice Trend` : 'Overall Practice Rate (%)'}
                 </h3>
                 <div className="flex-1 min-h-[200px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={mockTrendData}>
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                    <LineChart data={realTrendData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
                       <XAxis dataKey="name" />
                       <YAxis domain={[0, 100]} />
                       <Tooltip />
-                      <Line type="monotone" dataKey="val" stroke="#10b981" strokeWidth={3} />
+                      <Line type="monotone" dataKey="val" stroke="#6366f1" strokeWidth={4} dot={{ r: 6 }} activeDot={{ r: 8 }} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
+              {/* UPDATED ATTENDANCE CHART CARD */}
               <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  {selectedLearner ? `${selectedLearner}'s Absences` : 'Overall Absence Count'}
+                  {selectedLearner ? `${selectedLearner}'s Attendance` : 'Overall Attendance Breakdown'}
                 </h3>
                 <div className="flex-1 min-h-[200px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={mockAbsenceData}>
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="val" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                    <BarChart data={realAttendanceData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                      <YAxis axisLine={false} tickLine={false} />
+                      <Tooltip 
+                        cursor={{fill: 'transparent'}}
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                      />
+                      <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ paddingBottom: '20px' }} />
+                      <Bar 
+                        name="Days Present" 
+                        dataKey="present" 
+                        stackId="a" 
+                        fill="#10b981" 
+                        radius={[0, 0, 0, 0]} 
+                      />
+                      <Bar 
+                        name="Days Absent" 
+                        dataKey="absent" 
+                        stackId="a" 
+                        fill="#f43f5e" 
+                        radius={[6, 6, 0, 0]} 
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

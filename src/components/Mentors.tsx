@@ -1,232 +1,197 @@
 import React, { useState, useMemo } from 'react';
-import { OverallMetrics, Learner, AllCohortsPhoto } from '../types';
-import { Users, BookOpen, Layers, FileText, Search, Star, X, FilterX } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { OverallMetrics, Learner, AllCohortsPhoto, TransformedAttendance, TransformedPractice, ViewType } from '../types';
+import { Users, BookOpen, Layers, FileText, Search, Star, Award, Zap, Heart, Database, Table, BarChart3, Code2 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Legend } from 'recharts';
 import { BottomNav } from './BottomNav';
 
 interface MentorsProps {
   metrics: OverallMetrics;
   learners: Learner[];
+  attendanceData: TransformedAttendance[];
+  practiceData: TransformedPractice[];
   cohortPhotos: AllCohortsPhoto[];
-  onNavigate: (view: any) => void;
-  currentView: any;
+  onNavigate: (view: ViewType) => void;
+  currentView: ViewType;
 }
 
-export const Mentors: React.FC<MentorsProps> = ({ metrics, learners, cohortPhotos, onNavigate, currentView }) => {
-  const uniqueCohorts = new Set(learners.map(l => l.COHORT_NO).filter(Boolean)).size;
-  const modules = ['SQL', 'Excel', 'Power BI', 'Python'];
+export const Mentors: React.FC<MentorsProps> = ({ metrics, learners, attendanceData, practiceData, onNavigate, currentView }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  
+  const modules = [
+    { name: 'SQL', icon: Database, color: '#3b82f6' },
+    { name: 'Excel', icon: Table, color: '#10b981' },
+    { name: 'PBI', icon: BarChart3, color: '#f59e0b' },
+    { name: 'Python', icon: Code2, color: '#6366f1' }
+  ];
 
   const mentorList = [
     { 
       name: 'Marianyl Itumay - Orlain', 
-      module: 'Data Analytics', 
-      image: 'https://drive.google.com/file/d/1cSdF7bbZjgp8FY9YU4bt0jtW3Jlb2POu/view?usp=drive_link' 
+      role: 'Lead Data Analytics Mentor', 
+      bio: 'Expert in Business Intelligence and Statistical Modeling with over 10+ years of industry experience.',
+      image: '1cSdF7bbZjgp8FY9YU4bt0jtW3Jlb2POu' // Extracted ID from your link
     }
   ];
 
-  const filteredMentors = mentorList.filter(m => m.name.toLowerCase().includes(searchTerm.toLowerCase()) || m.module.toLowerCase().includes(searchTerm.toLowerCase()));
-  const [selectedMentor, setSelectedMentor] = useState<string | null>(mentorList[0].name);
+  const [selectedMentor] = useState<string>(mentorList[0].name);
+  const uniqueCohorts = new Set(learners.map(l => l.COHORT_NO).filter(Boolean)).size;
 
-  const currentMentorData = mentorList.find(m => m.name === selectedMentor) || mentorList[0];
+  // --- ACTUAL DATA: Module Performance Aggregation ---
+  const modulePerformanceData = useMemo(() => {
+    return modules.map(mod => {
+      const att = attendanceData.filter(d => d.MODULE.toUpperCase().includes(mod.name.toUpperCase()));
+      const prac = practiceData.filter(d => d.MODULE.toUpperCase().includes(mod.name.toUpperCase()));
+      
+      const avgAtt = att.length > 0 ? att.reduce((s, c) => s + c.Attendance_Rate, 0) / att.length : 0;
+      const avgPrac = prac.length > 0 ? prac.reduce((s, c) => s + c.Rate_of_Submission, 0) / prac.length : 0;
 
-  // Helper to get direct image URL from drive link
-  const getDriveImageUrl = (url: string) => {
-    if (!url) return '';
-    const match = url.match(/\/d\/(.*?)\//);
-    return match ? `https://drive.google.com/uc?export=view&id=${match[1]}` : url;
-  };
-
-  const mockTrendData = useMemo(() => {
-    if (selectedMentor) {
-      const seed = selectedMentor.length;
-      return [
-        { name: 'Week 1', val: 90 + (seed % 5) },
-        { name: 'Week 2', val: 92 + (seed % 6) },
-        { name: 'Week 3', val: 95 + (seed % 4) },
-        { name: 'Week 4', val: 98 + (seed % 2) },
-      ];
-    }
-    return [
-      { name: 'Week 1', val: 95 },
-      { name: 'Week 2', val: 96 },
-      { name: 'Week 3', val: 98 },
-      { name: 'Week 4', val: 99 },
-    ];
-  }, [selectedMentor]);
-
-  const mockAbsenceData = useMemo(() => {
-    if (selectedMentor) {
-      const seed = selectedMentor.length;
-      return [
-        { name: 'SQL', val: seed % 3 },
-        { name: 'Excel', val: seed % 2 },
-        { name: 'PBI', val: (seed % 2) + 1 },
-        { name: 'Python', val: seed % 2 },
-      ];
-    }
-    return [
-      { name: 'SQL', val: 2 },
-      { name: 'Excel', val: 1 },
-      { name: 'PBI', val: 0 },
-      { name: 'Python', val: 1 },
-    ];
-  }, [selectedMentor]);
+      return {
+        name: mod.name,
+        attendance: Math.round(avgAtt),
+        submission: Math.round(avgPrac)
+      };
+    });
+  }, [attendanceData, practiceData]);
 
   return (
-    <div className="min-h-screen p-4 pb-24 space-y-6 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1531482615713-2afd69097998?q=80&w=2070&auto=format&fit=crop")' }}>
-      <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 dark:border-gray-700/50 p-6 min-h-[80vh] flex flex-col">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Mentors Dashboard</h1>
+    <div className="min-h-screen p-4 pb-24 space-y-6 bg-cover bg-center bg-no-repeat transition-all duration-500" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1531482615713-2afd69097998?q=80&w=2070&auto=format&fit=crop")' }}>
+      <div className="bg-white/90 dark:bg-gray-900/95 backdrop-blur-xl rounded-[2.5rem] shadow-2xl border border-white/20 dark:border-gray-700/50 p-8 min-h-[80vh] flex flex-col">
         
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1">
-          {/* Left Column */}
-          <div className="lg:col-span-3 flex flex-col gap-6">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center relative">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Mentor's Profile</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Mentor details</p>
-              
-              {selectedMentor && (
-                <button 
-                  onClick={() => setSelectedMentor(null)}
-                  className="absolute top-6 right-6 flex items-center gap-1 text-xs text-rose-500 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300 font-medium bg-rose-50 dark:bg-rose-900/30 px-2 py-1 rounded-md transition-colors"
-                >
-                  <FilterX className="w-3 h-3" />
-                  Unfilter
-                </button>
-              )}
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
+          <div>
+            <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight">Mentors Leadership</h1>
+            <p className="text-gray-500 dark:text-gray-400 font-medium">Guiding the next generation of Data Analysts</p>
+          </div>
+          <div className="flex items-center gap-2 bg-rose-500/10 text-rose-600 px-5 py-2.5 rounded-2xl border border-rose-500/20">
+            <Star className="fill-rose-600" size={18} />
+            <span className="font-bold uppercase tracking-widest text-xs">Faculty Excellence</span>
+          </div>
+        </div>
 
-              <div className="w-48 h-48 rounded-full border-4 border-rose-100 dark:border-rose-900/50 overflow-hidden bg-gray-50 dark:bg-gray-800 flex items-center justify-center shadow-inner mb-4 relative">
-                <img src={getDriveImageUrl(currentMentorData.image)} alt={currentMentorData.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                <div className="absolute bottom-2 right-6 bg-rose-500 rounded-full p-2 shadow-lg">
-                  <Star className="w-6 h-6 text-white" />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1">
+          {/* Left Column: Premium Profile Card */}
+          <div className="lg:col-span-4 flex flex-col gap-6">
+            <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] p-8 shadow-xl border border-gray-100 dark:border-gray-700 relative overflow-hidden group">
+              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-rose-400 to-pink-600" />
+              
+              <div className="flex flex-col items-center relative z-10">
+                <div className="w-56 h-56 rounded-[3rem] border-8 border-rose-50 dark:border-rose-900/30 overflow-hidden shadow-2xl mb-6 transform group-hover:scale-105 transition-transform duration-500">
+                  <img 
+                    src={`https://drive.google.com/thumbnail?id=${mentorList[0].image}&sz=w1000`} 
+                    alt={mentorList[0].name} 
+                    className="w-full h-full object-cover" 
+                  />
                 </div>
+                
+                <h3 className="text-2xl font-black text-gray-900 dark:text-white text-center leading-tight">
+                  {mentorList[0].name}
+                </h3>
+                <p className="text-rose-600 dark:text-rose-400 font-bold uppercase tracking-widest text-xs mt-2">
+                  {mentorList[0].role}
+                </p>
+                
+                <div className="flex gap-2 mt-6">
+                  {modules.map((m, i) => (
+                    <div key={i} className="p-2 bg-gray-50 dark:bg-gray-700 rounded-xl text-gray-400 hover:text-rose-500 transition-colors">
+                      <m.icon size={18} />
+                    </div>
+                  ))}
+                </div>
+
+                <p className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400 leading-relaxed italic">
+                  "{mentorList[0].bio}"
+                </p>
               </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white text-center">{currentMentorData.name}</h3>
-              <p className="text-sm text-rose-600 dark:text-rose-400 font-medium">{currentMentorData.module} Expert</p>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col items-center text-center">
-                  <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-full mb-2">
-                    <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <p className="text-xs text-gray-500 uppercase">Enrollees</p>
-                  <p className="text-xl font-bold text-gray-900 dark:text-white">{learners.length}</p>
-                </div>
-                <div className="flex flex-col items-center text-center">
-                  <div className="p-3 bg-emerald-50 dark:bg-emerald-900/30 rounded-full mb-2">
-                    <Layers className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <p className="text-xs text-gray-500 uppercase">Cohorts</p>
-                  <p className="text-xl font-bold text-gray-900 dark:text-white">{uniqueCohorts}</p>
-                </div>
-                <div className="flex flex-col items-center text-center">
-                  <div className="p-3 bg-purple-50 dark:bg-purple-900/30 rounded-full mb-2">
-                    <BookOpen className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <p className="text-xs text-gray-500 uppercase">Modules</p>
-                  <p className="text-xl font-bold text-gray-900 dark:text-white">4</p>
-                </div>
-                <div className="flex flex-col items-center text-center">
-                  <div className="p-3 bg-amber-50 dark:bg-amber-900/30 rounded-full mb-2">
-                    <FileText className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                  </div>
-                  <p className="text-xs text-gray-500 uppercase">Lessons</p>
-                  <p className="text-xl font-bold text-gray-900 dark:text-white">45</p>
-                </div>
+            {/* Overall Impact Stats */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700 text-center">
+                <Users className="text-blue-500 mx-auto mb-2" size={24} />
+                <p className="text-[10px] font-black text-gray-400 uppercase">Mentored</p>
+                <p className="text-2xl font-black dark:text-white">{learners.length}</p>
+              </div>
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700 text-center">
+                <Layers className="text-emerald-500 mx-auto mb-2" size={24} />
+                <p className="text-[10px] font-black text-gray-400 uppercase">Batches</p>
+                <p className="text-2xl font-black dark:text-white">{uniqueCohorts}</p>
               </div>
             </div>
           </div>
 
-          {/* Middle & Right Columns */}
-          <div className="lg:col-span-9 flex flex-col gap-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Mentor Search</h3>
-                <div className="relative mb-4">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <input 
-                    type="text" 
-                    placeholder="Search mentor..." 
-                    className="w-full pl-10 pr-10 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-rose-500 dark:text-white"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                  {searchTerm && (
-                    <button 
-                      onClick={() => setSearchTerm('')}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-                <div className="flex-1 overflow-y-auto max-h-[300px] space-y-2 pr-2 scrollbar-elegant">
-                  {filteredMentors.map((mentor) => (
-                    <div 
-                      key={mentor.name}
-                      onClick={() => setSelectedMentor(mentor.name)}
-                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                        selectedMentor === mentor.name 
-                          ? 'bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800' 
-                          : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border border-transparent'
-                      }`}
-                    >
-                      <p className="font-medium text-gray-900 dark:text-white text-sm">{mentor.name}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{mentor.module} Expert</p>
-                    </div>
-                  ))}
-                  {filteredMentors.length === 0 && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">No mentors found</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="lg:col-span-2 grid grid-cols-2 gap-4">
-                {modules.map(mod => (
-                  <div key={mod} className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center hover:shadow-md transition-shadow cursor-pointer">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-rose-100 to-pink-100 dark:from-rose-900/40 dark:to-pink-900/40 flex items-center justify-center mb-4 shadow-inner">
-                      <span className="text-xl font-bold text-rose-600 dark:text-rose-400">{mod.substring(0, 3)}</span>
-                    </div>
-                    <h4 className="font-semibold text-gray-900 dark:text-white">{mod} Module</h4>
-                    <p className="text-xs text-gray-500 mt-1">Mentor Performance</p>
+          {/* Right Column: Performance Data */}
+          <div className="lg:col-span-8 flex flex-col gap-6">
+            
+            {/* Module Expertise Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {modules.map((mod) => (
+                <div key={mod.name} className="bg-white dark:bg-gray-800 p-6 rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center group hover:bg-rose-500 transition-all duration-300">
+                  <div className="p-3 rounded-2xl bg-gray-50 dark:bg-gray-700 mb-3 group-hover:bg-white/20 transition-colors">
+                    <mod.icon className="text-gray-900 dark:text-white group-hover:text-white" size={24} />
                   </div>
-                ))}
+                  <span className="font-bold text-gray-900 dark:text-white group-hover:text-white">{mod.name}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Engagement Trends Chart */}
+            <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] p-8 shadow-xl border border-gray-100 dark:border-gray-700 flex-1">
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Curriculum Engagement Trends</h3>
+                <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest">
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-rose-500" /> Attendance</div>
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-indigo-500" /> Submissions</div>
+                </div>
+              </div>
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={modulePerformanceData}>
+                    <defs>
+                      <linearGradient id="colorAtt" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#e11d48" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#e11d48" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="colorSub" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fontWeight: 700}} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} domain={[0, 100]} />
+                    <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }} />
+                    <Area type="monotone" dataKey="attendance" stroke="#e11d48" strokeWidth={4} fillOpacity={1} fill="url(#colorAtt)" />
+                    <Area type="monotone" dataKey="submission" stroke="#6366f1" strokeWidth={4} fillOpacity={1} fill="url(#colorSub)" />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Class Practice Submission Trend</h3>
-                <div className="flex-1 min-h-[200px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={mockTrendData}>
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                      <XAxis dataKey="name" />
-                      <YAxis domain={[0, 100]} />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="val" stroke="#e11d48" strokeWidth={3} />
-                    </LineChart>
-                  </ResponsiveContainer>
+            {/* Mentor Performance by Module Table */}
+            <div className="bg-white dark:bg-gray-800 rounded-[2.5rem] p-8 shadow-xl border border-gray-100 dark:border-gray-700">
+              <h3 className="text-xl font-black text-gray-900 dark:text-white mb-6 uppercase tracking-tight">Student Success Benchmarks</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="p-6 rounded-3xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/50 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm text-emerald-500"><Zap /></div>
+                    <div>
+                      <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase">Avg Attendance</p>
+                      <p className="text-2xl font-black dark:text-white">{metrics.Overall_Attendance_Rate.toFixed(1)}%</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Student Absence Count for Each Module</h3>
-                <div className="flex-1 min-h-[200px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={mockAbsenceData}>
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="val" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                <div className="p-6 rounded-3xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm text-indigo-500"><Award /></div>
+                    <div>
+                      <p className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase">Success Rate</p>
+                      <p className="text-2xl font-black dark:text-white">{metrics.Overall_Submission_Rate.toFixed(1)}%</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
+
           </div>
         </div>
       </div>
