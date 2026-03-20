@@ -28,7 +28,7 @@ export const Mentors: React.FC<MentorsProps> = ({ metrics, learners, attendanceD
     { 
       name: 'Marianyl Itumay - Orlain', 
       role: 'Lead Data Analytics Mentor', 
-      bio: 'Expert in Business Intelligence and Statistical Modeling with over 10+ years of industry experience.',
+      bio: 'Expert in Business Intelligence, Data Modeling and Analysis with over 10+ years of industry experience.',
       image: '1cSdF7bbZjgp8FY9YU4bt0jtW3Jlb2POu' // Extracted ID from your link
     }
   ];
