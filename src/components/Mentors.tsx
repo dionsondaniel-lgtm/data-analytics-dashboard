@@ -86,7 +86,7 @@ export const Mentors: React.FC<MentorsProps> = ({ metrics, learners, attendanceD
                 <h3 className="text-2xl font-black text-gray-900 dark:text-white text-center leading-tight">
                   {mentorList[0].name}
                 </h3>
-                <p className="text-rose-600 dark:text-rose-400 font-bold uppercase tracking-widest text-xs mt-2">
+                <p className="text-rose-600 dark:text-rose-400 text-center font-bold uppercase tracking-widest text-xs mt-2">
                   {mentorList[0].role}
                 </p>
                 
