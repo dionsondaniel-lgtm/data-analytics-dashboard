@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ViewType, OverallMetrics } from '../types';
 import { 
@@ -6,7 +6,6 @@ import {
   Briefcase, Info, Sparkles, Database, FileSpreadsheet, 
   BarChart2, Code, X, Zap, ChevronRight 
 } from 'lucide-react';
-import { getDriveImageUrl } from '../App';
 
 interface PortalProps {
   metrics?: OverallMetrics;
@@ -31,170 +30,177 @@ export const Portal: React.FC<PortalProps> = ({ metrics, onNavigate, currentView
 
   const modules = [
     { 
-      name: 'SQL', 
-      icon: Database, 
-      color: 'from-blue-600 to-blue-400', 
-      intro: 'The foundation of data retrieval. Learn to communicate with complex databases and extract meaningful intelligence using industry-standard Structured Query Language.',
+      name: 'SQL', icon: Database, color: 'from-blue-600 to-blue-400', 
+      intro: 'The foundation of data retrieval. Learn to communicate with databases using standard Structured Query Language.',
       image: 'https://images.unsplash.com/photo-1544383835-bda2bc66a55d?q=80&w=400&auto=format&fit=crop'
     },
     { 
-      name: 'Excel', 
-      icon: FileSpreadsheet, 
-      color: 'from-emerald-600 to-emerald-400', 
-      intro: 'Beyond the cells. Master advanced data manipulation, pivot tables, and statistical modeling to turn spreadsheets into powerful decision-making engines.',
+      name: 'Excel', icon: FileSpreadsheet, color: 'from-emerald-600 to-emerald-400', 
+      intro: 'Beyond the cells. Master advanced data manipulation, pivot tables, and statistical modeling.',
       image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=400&auto=format&fit=crop'
     },
     { 
-      name: 'Power BI', 
-      icon: BarChart2, 
-      color: 'from-amber-500 to-yellow-400', 
-      intro: 'Visual Storytelling. Transform raw numbers into interactive, automated dashboards that reveal the "why" behind the data through stunning visualizations.',
+      name: 'Power BI', icon: BarChart2, color: 'from-amber-500 to-yellow-400', 
+      intro: 'Visual Storytelling. Transform raw numbers into interactive, automated dashboards.',
       image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=400&auto=format&fit=crop'
     },
     { 
-      name: 'Python', 
-      icon: Code, 
-      color: 'from-indigo-600 to-indigo-400', 
-      intro: 'Automated Analytics. Harness the power of programming to handle big data, perform predictive analysis, and automate repetitive data cleaning tasks.',
+      name: 'Python', icon: Code, color: 'from-indigo-600 to-indigo-400', 
+      intro: 'Automated Analytics. Harness programming to handle big data and predictive analysis.',
       image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=400&auto=format&fit=crop'
     },
   ];
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: { y: 0, opacity: 1 }
+  };
+
   return (
-    <div className="p-4 md:p-8 space-y-12 max-w-7xl mx-auto">
+    <div className="p-4 md:p-8 space-y-12 max-w-7xl mx-auto overflow-x-hidden">
       
-      {/* Core Modules 3D Section */}
+      {/* CORE MODULES */}
       <section>
-        <div className="flex items-center gap-3 mb-8">
-          <div className="h-8 w-1.5 bg-indigo-600 rounded-full"></div>
-          <h2 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight italic">CORE MODULES</h2>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+        <motion.div initial={{ x: -20, opacity: 0 }} whileInView={{ x: 0, opacity: 1 }} className="flex items-center gap-3 mb-8">
+          <div className="h-8 w-1.5 bg-indigo-600 rounded-full" />
+          <h2 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight italic uppercase">Core Modules</h2>
+        </motion.div>
+        
+        <motion.div variants={containerVariants} initial="hidden" animate="visible" className="grid grid-cols-2 sm:grid-cols-4 gap-4 md:gap-8">
           {modules.map((mod) => (
             <motion.div 
               key={mod.name} 
-              whileHover={{ scale: 1.1, y: -5 }}
-              whileTap={{ scale: 0.95 }}
+              variants={itemVariants}
+              whileHover={{ scale: 1.05, y: -5 }}
               onClick={() => setSelectedModule(mod)}
               className="flex flex-col items-center group cursor-pointer"
             >
-              <div className={`relative w-24 h-24 rounded-3xl bg-gradient-to-br ${mod.color} shadow-[0_10px_20px_rgba(0,0,0,0.1)] flex items-center justify-center overflow-hidden`}>
-                <div className="absolute inset-0 bg-white/10 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <mod.icon className="w-12 h-12 text-white relative z-10 drop-shadow-2xl transition-transform group-hover:rotate-12" />
-                <div className="absolute -bottom-2 -right-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                   <mod.icon className="w-16 h-16 text-white" />
-                </div>
+              <div className={`relative w-20 h-20 md:w-24 md:h-24 rounded-3xl bg-gradient-to-br ${mod.color} shadow-xl flex items-center justify-center overflow-hidden transition-transform group-hover:rotate-3`}>
+                <mod.icon className="w-10 h-10 md:w-12 md:h-12 text-white relative z-10 drop-shadow-lg" />
               </div>
-              <span className="mt-4 font-black text-xs uppercase tracking-widest text-gray-500 dark:text-gray-400 group-hover:text-indigo-600 transition-colors">
+              <span className="mt-3 font-black text-[10px] md:text-xs uppercase tracking-widest text-gray-500 dark:text-gray-400 group-hover:text-indigo-600 transition-colors">
                 {mod.name}
               </span>
             </motion.div>
           ))}
-        </div>
+        </motion.div>
       </section>
 
-      {/* Dashboard Sections with Animated Borders */}
+      {/* DASHBOARD UNIVERSE */}
       <section>
-        <div className="flex items-center gap-3 mb-8">
-          <div className="h-8 w-1.5 bg-indigo-600 rounded-full"></div>
-          <h2 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight italic">DASHBOARD UNIVERSE</h2>
-        </div>
+        <motion.div initial={{ x: -20, opacity: 0 }} whileInView={{ x: 0, opacity: 1 }} className="flex items-center gap-3 mb-8">
+          <div className="h-8 w-1.5 bg-indigo-600 rounded-full" />
+          <h2 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight italic uppercase">Dashboard Universe</h2>
+        </motion.div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {cards.map((card) => (
+        <motion.div variants={containerVariants} initial="hidden" animate="visible" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-10">
+          {cards.map((card, index) => (
             <motion.div
               key={card.title}
+              variants={itemVariants}
               onClick={() => onNavigate(card.title)}
-              // Periodic Shake every 5 seconds
-              animate={{ x: [0, -2, 2, -2, 2, 0] }}
-              transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 5 }}
-              whileHover={{ scale: 1.05, zIndex: 10 }}
-              className="relative p-[2px] group cursor-pointer overflow-hidden rounded-[2.5rem]"
+              // RELAY SHAKE ANIMATION
+              animate={{ 
+                x: [0, -1, 1, -1, 1, 0],
+              }}
+              transition={{ 
+                duration: 0.6, 
+                repeat: Infinity, 
+                repeatDelay: 8,
+                delay: index * 0.2
+              }}
+              whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+              className="relative p-[1px] group cursor-pointer overflow-hidden rounded-[2.5rem]"
             >
-              {/* Running Color Border */}
-              <div className={`absolute inset-0 bg-gradient-to-r ${card.gradient} animate-spin-slow opacity-60 group-hover:opacity-100 transition-opacity`} 
-                   style={{ animationDuration: '3s', margin: '-50%' }}></div>
+              {/* Border Glow */}
+              <div className={`absolute inset-0 bg-gradient-to-r ${card.gradient} opacity-30 group-hover:opacity-100 transition-opacity animate-spin-slow`} style={{ margin: '-100%' }} />
               
-              <div className="relative h-64 bg-white dark:bg-gray-900 rounded-[2.4rem] overflow-hidden flex flex-col border border-white/10">
-                {/* Background Image Snippet */}
-                <div className="absolute inset-0 z-0">
+              <div className="relative h-64 md:h-72 bg-white dark:bg-gray-900 rounded-[2.4rem] overflow-hidden flex flex-col border border-white/5 shadow-xl">
+                {/* Background Image - Made CLEARER */}
+                <div className="absolute inset-0 z-0 overflow-hidden">
                   <img 
                     src={`https://drive.google.com/thumbnail?id=${card.driveId}&sz=w800`} 
                     alt={card.title}
-                    className="w-full h-full object-cover opacity-30 group-hover:opacity-50 group-hover:scale-110 transition-all duration-700"
+                    className="w-full h-full object-cover opacity-60 contrast-125 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/60 to-transparent"></div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent" />
                 </div>
 
-                {/* Content Overlay */}
-                <div className="relative z-10 p-8 mt-auto">
-                  <div className="flex items-center gap-4 mb-2">
-                    <div className={`p-3 rounded-2xl bg-gradient-to-br ${card.gradient} shadow-lg shadow-black/20`}>
+                {/* Card Content */}
+                <div className="relative z-10 p-6 md:p-8 mt-auto">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className={`p-2.5 rounded-xl bg-gradient-to-br ${card.gradient} shadow-lg`}>
                       <card.icon className="w-5 h-5 text-white" />
                     </div>
-                    <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter">
+                    <h3 className="text-xl md:text-2xl font-black text-white uppercase italic tracking-tighter shadow-black drop-shadow-md">
                       {card.title}
                     </h3>
                   </div>
-                  <p className="text-gray-300 text-sm font-medium opacity-0 group-hover:opacity-100 -translate-y-2 group-hover:translate-y-0 transition-all duration-500">
-                    {card.description} — Explore specialized analytics and detailed logs.
+                  {/* Always visible description for mobile, slight slide-up for Desktop */}
+                  <p className="text-gray-200 text-xs md:text-sm font-medium transition-all duration-500 md:opacity-0 md:group-hover:opacity-100 md:translate-y-2 md:group-hover:translate-y-0">
+                    {card.description} — Specialized Analytics.
                   </p>
                 </div>
 
-                {/* Visual Accent */}
-                <div className="absolute top-6 right-6 p-2 rounded-full bg-white/5 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-500">
+                {/* Hover Icon */}
+                <div className="absolute top-6 right-6 p-2 rounded-full bg-white/10 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity hidden md:block">
                   <ChevronRight className="w-5 h-5 text-white" />
                 </div>
               </div>
             </motion.div>
           ))}
-        </div>
+        </motion.div>
       </section>
 
-      {/* Module Quick Info Modal */}
+      {/* MODULE MODAL - Adjusted Position lower (increased pt-36 md:pt-48) */}
       <AnimatePresence>
         {selectedModule && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+          <div className="fixed inset-0 z-[100] flex items-start justify-center p-4 bg-black/70 backdrop-blur-md overflow-y-auto pt-36 md:pt-48">
             <motion.div 
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              initial={{ scale: 0.9, opacity: 0, y: 50 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative w-full max-w-lg bg-white dark:bg-gray-900 rounded-[3rem] overflow-hidden shadow-2xl border border-white/20"
+              exit={{ scale: 0.9, opacity: 0, y: 50 }}
+              className="relative w-full max-w-lg bg-white dark:bg-gray-900 rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10 mb-20"
             >
               <button 
                 onClick={() => setSelectedModule(null)}
-                className="absolute top-6 right-6 z-20 p-2 bg-black/20 hover:bg-black/40 rounded-full text-white transition-colors"
+                className="absolute top-6 right-6 z-20 p-2 bg-black/40 hover:bg-black/60 rounded-full text-white"
               >
                 <X size={20} />
               </button>
 
               <div className="relative h-48">
                 <img src={selectedModule.image} className="w-full h-full object-cover" alt={selectedModule.name} />
-                <div className={`absolute inset-0 bg-gradient-to-t from-white dark:from-gray-900 via-transparent to-black/20`}></div>
-                <div className="absolute bottom-4 left-8">
-                  <div className={`p-4 rounded-3xl bg-gradient-to-br ${selectedModule.color} shadow-xl inline-flex mb-4`}>
+                <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-gray-900 via-transparent to-black/20" />
+                <div className="absolute -bottom-6 left-8">
+                  <div className={`p-4 rounded-3xl bg-gradient-to-br ${selectedModule.color} shadow-2xl`}>
                     <selectedModule.icon className="w-8 h-8 text-white" />
                   </div>
                 </div>
               </div>
 
-              <div className="p-8 pt-4">
-                <div className="flex items-center gap-2 mb-4">
+              <div className="p-8 pt-10">
+                <div className="flex items-center gap-2 mb-3">
                   <Zap size={16} className="text-indigo-600" />
-                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-600">Quick Introduction</span>
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-600">Module Briefing</span>
                 </div>
                 <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-4 uppercase italic">
-                  {selectedModule.name} Mastery
+                  {selectedModule.name}
                 </h2>
-                <p className="text-gray-600 dark:text-gray-400 leading-relaxed font-medium">
+                <p className="text-gray-600 dark:text-gray-400 font-medium leading-relaxed">
                   {selectedModule.intro}
                 </p>
 
                 <button 
                   onClick={() => setSelectedModule(null)}
-                  className="mt-8 w-full py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-black rounded-2xl uppercase tracking-widest hover:scale-[1.02] transition-transform shadow-xl"
+                  className="mt-8 w-full py-4 bg-indigo-600 text-white font-black rounded-2xl uppercase tracking-widest shadow-lg hover:bg-indigo-700 transition-colors"
                 >
-                  Confirm Understanding
+                  Confirm & Close
                 </button>
               </div>
             </motion.div>
@@ -208,7 +214,7 @@ export const Portal: React.FC<PortalProps> = ({ metrics, onNavigate, currentView
           100% { transform: rotate(360deg); }
         }
         .animate-spin-slow {
-          animation: border-flow 4s linear infinite;
+          animation: border-flow 6s linear infinite;
         }
       `}</style>
     </div>

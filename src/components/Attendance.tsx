@@ -98,6 +98,29 @@ export const Attendance: React.FC<AttendanceProps> = ({
 
   return (
     <div className="min-h-screen p-4 pb-24 space-y-6 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=2070&auto=format&fit=crop")' }}>
+      {/* Custom Scrollbar Styling */}
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #6366f1;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #334155;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #818cf8;
+        }
+      `}</style>
+
       <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg rounded-[2.5rem] shadow-2xl border border-white/20 dark:border-gray-700/50 p-8 min-h-[80vh] flex flex-col">
         <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-8">Attendance Dashboard</h1>
         
@@ -271,6 +294,7 @@ export const Attendance: React.FC<AttendanceProps> = ({
                 />
               </div>
 
+              {/* Styled Scrollbar Container */}
               <div className="flex-1 overflow-y-auto space-y-1 pr-2 custom-scrollbar">
                 {filteredLearners.map(l => (
                   <button 

@@ -6,7 +6,7 @@ import {
 import { 
   Users, BookOpen, Layers, FileText, CheckCircle, 
   Award, TrendingUp, Trophy, Zap, ArrowUpRight, 
-  ImageIcon, Sparkles
+  ImageIcon, Sparkles, X, Maximize2
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { BottomNav } from './BottomNav';
@@ -29,16 +29,16 @@ export const Home: React.FC<HomeProps> = ({
   cohortPhotos = [], alumniProjects = [], onNavigate, currentView 
 }) => {
   
-  // --- States for Auto-playing Gallery ---
+  // --- States ---
   const [currentDisplayImage, setCurrentDisplayImage] = useState<string | null>(null);
   const [fade, setFade] = useState(true);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const uniqueCohorts = new Set(learners.map(l => l.COHORT_NO).filter(Boolean)).size;
   const modules = ['SQL', 'EXCEL', 'PBI', 'PYTHON'];
 
-  // --- Image Processing Logic ---
+  // --- Comprehensive Image Pool ---
   const imagePool = useMemo(() => {
-    // 1. Static URLs from the 4 cohorts provided
     const staticCohortUrls = [
       // 1st Cohort
       "https://drive.google.com/file/d/1g81_O0i5s9g11Q3WNMuZ82pClqiIh2En/view?usp=drive_link", "https://drive.google.com/file/d/1WmJUw9j2Okl22UIIcE4dJwXJgy8wKwyV/view?usp=drive_link", "https://drive.google.com/file/d/1fUjpvbDRuWzeww3A68TXaBf4t7_cLp_L/view?usp=drive_link", "https://drive.google.com/file/d/1ymiNFow3j_7y_InU6clSMOf4yu6RtbvA/view?usp=drive_link", "https://drive.google.com/file/d/1uHBEPPNHBqgCZxpJrcL-khX6fFA3la3O/view?usp=drive_link", "https://drive.google.com/file/d/11rJdZ4G2KOmUgM4k2Dm4i8DbN3l-OCM1/view?usp=drive_link", "https://drive.google.com/file/d/1ZlGAgWEdwRbqMx3D6cwZwOyP6jbxOdgJ/view?usp=drive_link", "https://drive.google.com/file/d/1JdI3smeqUzrKbzt4_LjpbfSM84tncbgG/view?usp=drive_link", "https://drive.google.com/file/d/1ekyWO5A7IwO4lybSuBeaTCXXzVD5p3E1/view?usp=drive_link", "https://drive.google.com/file/d/1WrfiO0GZ0uKW72LeDuvQsstb0tl3WzAf/view?usp=drive_link", "https://drive.google.com/file/d/1_mqxF76rRPRGA5QLFq2WFIFAXWVDiIxS/view?usp=drive_link", "https://drive.google.com/file/d/1D-RD_o35uIQKMRj6W8Gq4DbJ5cVIppEe/view?usp=drive_link", "https://drive.google.com/file/d/1gKb3wDTEH0dHLTCONSpPk8sjZeCUXsID/view?usp=drive_link", "https://drive.google.com/file/d/1l2k95-pL22twniAxgq-w-MtmikzTWKSC/view?usp=drive_link", "https://drive.google.com/file/d/1lOBs9n20E6DJgIdqZAZ5aCrkYQotOWuc/view?usp=drive_link", "https://drive.google.com/file/d/1UlhCobntxPgrlcEzeEULvtB3N8c-AxzA/view?usp=drive_link", "https://drive.google.com/file/d/1hXYqOpZkHIvBgti_iJ2nPtxrubzYzckm/view?usp=drive_link", "https://drive.google.com/file/d/1JHul1gFZoEHAcga-LMk6Y3r3rzI1rdsO/view?usp=drive_link", "https://drive.google.com/file/d/1mHqFXy4vGkwwHr4cT7iZx4hsUuHoxCI2/view?usp=drive_link", "https://drive.google.com/file/d/1Fj9uKNd6Ts_33pTpkGQ6Rm5FwCLdLkn0/view?usp=drive_link", "https://drive.google.com/file/d/1t8joFYJX5-Wc015mvSUTI48AcdwD3UtU/view?usp=drive_link", "https://drive.google.com/file/d/1J5v-77N-wM-cIIJk8ptf6zEBWRVTL6Vs/view?usp=drive_link", "https://drive.google.com/file/d/1m99nYxKj3hBwN1-vCy71w0Y9cBP2JcaD/view?usp=drive_link", "https://drive.google.com/file/d/14sesRyhGTBMYTQ8pFcYQsqioeLI_Mwxq/view?usp=drive_link", "https://drive.google.com/file/d/1eyFQwa1SxBtExOv3eWXf2LJOQsDoga_O/view?usp=drive_link", "https://drive.google.com/file/d/1K3_LYY0jq-IlDSsGrZnDMseTMEBSMyUy/view?usp=drive_link", "https://drive.google.com/file/d/1tCCT9G0b0La8zXmI-gkP78qJi2v7_6a0/view?usp=drive_link", "https://drive.google.com/file/d/1LL7P15iyu9RSiuvLU61HifI5KYRvbJst/view?usp=drive_link", "https://drive.google.com/file/d/1QgrcyaUYMwTyZ4PkN3OeYXLmw4Swc7bw/view?usp=drive_link", "https://drive.google.com/file/d/1RUke4NMo3ai_XhjVW4qkSE6PxN71GfUn/view?usp=drive_link", "https://drive.google.com/file/d/1X__wC3eh0OVaC5seNgzg4Zi86b45jC7C/view?usp=drive_link", "https://drive.google.com/file/d/1N0GsFDlaTfEXW6hsHIWJdcK1DzVUTvPa/view?usp=drive_link", "https://drive.google.com/file/d/1dr-KzVz5xSFi-BDi51QfAPf_I8eiO5Dz/view?usp=drive_link", "https://drive.google.com/file/d/1TIQE5YBVX1Q8YwKh6SFZbEF-69gPGpXG/view?usp=drive_link", "https://drive.google.com/file/d/1dv69OdLbz51_ian8Ue9L43GQGR4WFjsA/view?usp=drive_link", "https://drive.google.com/file/d/1NiGL5vdgQigPaT51X60Q_rVgobiF5KZ-/view?usp=drive_link", "https://drive.google.com/file/d/1Yeki7RCEg-GW1F_x_RUYreqsvHLaFrFM/view?usp=drive_link", "https://drive.google.com/file/d/13mmBogfBecP4X53_alsTxr2MZA6GEauN/view?usp=drive_link", "https://drive.google.com/file/d/10ob05p230cUWBrabjkf_TOG2SyyOpfkO/view?usp=drive_link", "https://drive.google.com/file/d/14pJ54nf4YY3UKmuVLf9EvrIzwfi7nU6R/view?usp=drive_link",
@@ -50,78 +50,62 @@ export const Home: React.FC<HomeProps> = ({
       "https://drive.google.com/file/d/1iU9iZe2EF3S249qqTrfYw6K5pCQipkjO/view?usp=drive_link", "https://drive.google.com/file/d/1DRxGEw2SNIgml71FEZQz2SUMCUH4MABD/view?usp=drive_link", "https://drive.google.com/file/d/11E6NHYBTBl9SIFPhpcCUm8VFyyqgxnu_/view?usp=drive_link", "https://drive.google.com/file/d/1xLuFFaqX1kZypu3U5jk8DfQhxdxtTGaI/view?usp=drive_link", "https://drive.google.com/file/d/1vqkiwUGZvS9aenEWzA5dnDujAg2St13Y/view?usp=drive_link", "https://drive.google.com/file/d/15mipYtFKWa0xYsg2Rnt5Rfnf8QvEQWj1/view?usp=drive_link", "https://drive.google.com/file/d/1NSe4za2m1QAAucFrkAoObddozbnzrZD5/view?usp=drive_link", "https://drive.google.com/file/d/1Mp5pKZ_AH-JgW6EhIjFWSoVkF0iSfRBx/view?usp=drive_link", "https://drive.google.com/file/d/17cZOTd-SNpbjIDiVTpv_mtVqtcGrjAXr/view?usp=drive_link", "https://drive.google.com/file/d/15sYPs-XlylMSDdqYBmWbgZ_kyPCPkrf6/view?usp=drive_link", "https://drive.google.com/file/d/15Lp5Wydj_eBU3CWvsRNxanMzasUIPtYG/view?usp=drive_link", "https://drive.google.com/file/d/11-mTnHuW98LDb8OPIG7oWULYqKuHBada/view?usp=drive_link", "https://drive.google.com/file/d/1MIopWtr9hXkPX1xcBuvdJHKtEMoE5bLE/view?usp=drive_link", "https://drive.google.com/file/d/1B0rbl2Lrh0qOCgsjw681uqCjFXuVoft_/view?usp=drive_link", "https://drive.google.com/file/d/1DXiMcV6tspJeO7LV15cXbdXeYnuetLDb/view?usp=drive_link", "https://drive.google.com/file/d/1fukW8u3yorO6ZRvKiHbXXMRVHM42aTwq/view?usp=drive_link", "https://drive.google.com/file/d/1fXQVCrYUAZnh24Ul25MB30qCSTKr69vt/view?usp=drive_link", "https://drive.google.com/file/d/1yHP0JP75Mk5PnaC8y6D1Jm9Tuby88NsS/view?usp=drive_link", "https://drive.google.com/file/d/1t4zQ3fbWnCH0gcxr94yPomxzKPszyjum/view?usp=drive_link", "https://drive.google.com/file/d/1U0XH8z_eeyTvDTaad78MH-ONiquuWIR2/view?usp=drive_link", "https://drive.google.com/file/d/1FUyfMXRCnqkLovgNT-zgiOJK9KQzClwI/view?usp=drive_link", "https://drive.google.com/file/d/1bkEwdnuTlhQvfWT5xAGm48y8Ur0kRZGz/view?usp=drive_link", "https://drive.google.com/file/d/1QD1hvYd0InuRyoC_gP4oemr6wpfyfhlg/view?usp=drive_link"
     ];
 
-    // 2. Dynamic URLs from props
-    const dynamicCohortUrls = cohortPhotos.map(p => p.IMAGE_URL).filter(Boolean);
-    const dynamicProjectUrls = alumniProjects.map(p => p.Project_Image_Url).filter(Boolean);
+    const dynamicUrls = [
+      ...cohortPhotos.map(p => p.IMAGE_URL),
+      ...alumniProjects.map(p => p.Project_Image_Url)
+    ].filter(Boolean);
     
-    // 3. Combine everything
-    const allUrls = [...staticCohortUrls, ...dynamicCohortUrls, ...dynamicProjectUrls];
-    
-    // 4. Transform to high-res streaming format
-    return allUrls
+    return [...staticCohortUrls, ...dynamicUrls]
       .map(url => {
-        const driveIdUrl = getDriveImageUrl(url);
-        return getHDImageUrl(driveIdUrl) || url;
+        const id = getDriveImageUrl(url);
+        return getHDImageUrl(id) || url;
       })
-      .filter(url => url && url.length > 20); // Basic validation
+      .filter(url => url.length > 20);
   }, [cohortPhotos, alumniProjects]);
 
-  // --- Random Stream Timer Logic ---
+  // --- Photo Streaming Engine ---
   useEffect(() => {
     if (imagePool.length === 0) return;
-
-    const streamRandomPhoto = () => {
+    const stream = () => {
       setFade(false);
       setTimeout(() => {
-        // Pick a truly random image from the pool
-        const randomIndex = Math.floor(Math.random() * imagePool.length);
-        setCurrentDisplayImage(imagePool[randomIndex]);
+        const next = imagePool[Math.floor(Math.random() * imagePool.length)];
+        setCurrentDisplayImage(next);
         setFade(true);
-      }, 500); 
+      }, 600);
     };
-
-    // Initial trigger
-    if (!currentDisplayImage) streamRandomPhoto();
-
-    // Loop every 5 seconds
-    const interval = setInterval(streamRandomPhoto, 5000); 
+    if (!currentDisplayImage) stream();
+    const interval = setInterval(stream, 5000);
     return () => clearInterval(interval);
   }, [imagePool, currentDisplayImage]);
 
-  // --- Analytics Calculations ---
-  const moduleEngagementData = useMemo(() => {
-    return modules.map(m => {
-      const data = attendanceData.filter(d => d.MODULE.toUpperCase().includes(m));
-      const avg = data.length > 0 
-        ? data.reduce((sum, curr) => sum + curr.Attendance_Rate, 0) / data.length 
-        : 0;
-      return { name: m, val: Math.round(avg) };
-    });
-  }, [attendanceData]);
+  // --- Analytics Logic ---
+  const moduleEngagementData = useMemo(() => modules.map(m => {
+    const data = attendanceData.filter(d => d.MODULE.toUpperCase().includes(m));
+    const avg = data.length > 0 ? data.reduce((s, c) => s + c.Attendance_Rate, 0) / data.length : 0;
+    return { name: m, val: Math.round(avg) };
+  }), [attendanceData]);
 
-  const cohortDistribution = useMemo(() => {
+  const cohortDist = useMemo(() => {
     const cohorts = Array.from(new Set(learners.map(l => l.COHORT_NO).filter(Boolean))).sort();
-    return cohorts.map(cohort => ({
-      name: `C-${cohort}`,
-      students: learners.filter(l => l.COHORT_NO === cohort).length
-    }));
+    return cohorts.map(c => ({ name: `C-${c}`, students: learners.filter(l => l.COHORT_NO === c).length }));
   }, [learners]);
 
   const topCohort = useMemo(() => {
     const cohorts = Array.from(new Set(projectData.map(p => p.COHORT_NO)));
-    if (cohorts.length === 0) return null;
-    const performance = cohorts.map(c => {
-      const projects = projectData.filter(p => p.COHORT_NO === c && p.GPA > 0);
-      const avgGPA = projects.length > 0 ? projects.reduce((sum, curr) => sum + curr.GPA, 0) / projects.length : 0;
-      return { id: c, score: avgGPA };
+    const perf = cohorts.map(c => {
+      const ps = projectData.filter(p => p.COHORT_NO === c && p.GPA > 0);
+      return { id: c, score: ps.length > 0 ? ps.reduce((s, cr) => s + cr.GPA, 0) / ps.length : 0 };
     });
-    return performance.sort((a, b) => b.score - a.score)[0];
+    return perf.sort((a, b) => b.score - a.score)[0];
   }, [projectData]);
 
   const totalSubmissions = practiceData.reduce((sum, p) => sum + p.Total_Submitted, 0);
 
   return (
     <div className="min-h-screen p-2 sm:p-4 pb-24 space-y-6 bg-cover bg-center bg-no-repeat transition-all duration-500" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=2029&auto=format&fit=crop")' }}>
+      
+      {/* Main Container - Keeps original White Light Theme */}
       <div className="bg-white/90 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl md:rounded-[2.5rem] shadow-2xl border border-white/20 dark:border-gray-700/50 p-4 sm:p-8 min-h-[80vh] flex flex-col">
         
         {/* Header */}
@@ -131,7 +115,7 @@ export const Home: React.FC<HomeProps> = ({
             <p className="text-gray-500 dark:text-gray-400 font-medium text-sm md:text-base">Data Analytics Program Overview</p>
           </div>
           <div className="flex items-center space-x-2 bg-white dark:bg-gray-800 p-2 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 w-fit">
-            <div className="p-2 bg-indigo-500 rounded-lg text-white"><Zap size={20} /></div>
+            <div className="p-2 bg-indigo-500 rounded-lg text-white shadow-md"><Zap size={20} /></div>
             <div className="pr-4 text-left">
               <p className="text-[10px] font-bold text-gray-400 uppercase">Live Pulse</p>
               <p className="text-xs md:text-sm font-bold dark:text-white">System Synchronized</p>
@@ -176,7 +160,7 @@ export const Home: React.FC<HomeProps> = ({
                 </div>
                 <div className="h-48">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={cohortDistribution}>
+                    <BarChart data={cohortDist}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fontWeight: 600}} />
                       <YAxis axisLine={false} tickLine={false} />
@@ -221,7 +205,7 @@ export const Home: React.FC<HomeProps> = ({
                     <p className="text-4xl font-black">Cohort {topCohort?.id || 'N/A'}</p>
                   </div>
                   <div className="h-1.5 w-full bg-white/20 rounded-full overflow-hidden">
-                    <div className="h-full bg-yellow-400 rounded-full" style={{ width: `${(topCohort?.score || 0) * 100}%` }} />
+                    <div className="h-full bg-yellow-400 rounded-full shadow-[0_0_10px_rgba(250,204,21,0.5)]" style={{ width: `${(topCohort?.score || 0) * 100}%` }} />
                   </div>
                   <div className="mt-6 flex items-center justify-between">
                     <div className="text-center">
@@ -236,46 +220,48 @@ export const Home: React.FC<HomeProps> = ({
               </div>
             </div>
 
-            {/* --- FIXED: HD RANDOM PHOTO STREAM --- */}
-            <div className="relative group overflow-hidden rounded-[2.5rem] bg-gray-900 aspect-video md:aspect-[21/9] shadow-2xl border border-white/10">
+            {/* --- ENHANCED STREAM CARD: Taller on Mobile for visibility --- */}
+            <div 
+              onClick={() => currentDisplayImage && setSelectedImage(currentDisplayImage)}
+              className="relative group overflow-hidden rounded-[2.5rem] bg-gray-950 aspect-[4/5] sm:aspect-video md:aspect-[21/9] cursor-pointer shadow-2xl ring-4 ring-white/50 dark:ring-white/5 border-8 border-gray-900/50 transition-all hover:scale-[1.01]"
+            >
               {currentDisplayImage ? (
-                <div className={`w-full h-full transition-opacity duration-1000 ease-in-out ${fade ? 'opacity-100' : 'opacity-0'}`}>
+                <div className={`w-full h-full transition-opacity duration-1000 ${fade ? 'opacity-100' : 'opacity-0'}`}>
+                  {/* Portrait Fix Layer: Blurred BG */}
+                  <div className="absolute inset-0 bg-cover bg-center blur-2xl opacity-40 scale-110" style={{ backgroundImage: `url(${currentDisplayImage})` }} />
+                  {/* Portrait Fix Layer: High-res Contain */}
                   <img 
                     src={currentDisplayImage} 
-                    alt="Cohort Moment" 
-                    className="w-full h-full object-cover scale-105 group-hover:scale-100 transition-transform duration-[12s] ease-linear"
+                    alt="Stream" 
+                    className="relative w-full h-full object-contain z-10 p-2 md:p-6"
                     referrerPolicy="no-referrer"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = `https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2071&auto=format&fit=crop`;
-                    }}
                   />
-                  {/* Overlay Gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
                   
-                  {/* Floating Content */}
-                  <div className="absolute bottom-6 left-6 md:bottom-8 md:left-10">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="p-1.5 bg-rose-500 rounded-lg shadow-lg">
-                        <Sparkles className="text-white w-4 h-4" />
-                      </div>
-                      <span className="px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-[10px] font-black text-white uppercase border border-white/20 tracking-widest">
-                        High Res Stream
-                      </span>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-20" />
+                  <div className="absolute top-6 right-6 z-30 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="p-3 bg-white/20 backdrop-blur-md rounded-full border border-white/30 text-white shadow-xl">
+                      <Maximize2 size={24} />
                     </div>
-                    <h4 className="text-xl md:text-3xl font-black text-white tracking-tight">Program Memories</h4>
-                    <p className="text-white/60 text-xs md:text-sm font-medium mt-1">Randomized capture from {imagePool.length} memories...</p>
+                  </div>
+
+                  <div className="absolute bottom-8 left-10 z-30 pr-10">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="p-1.5 bg-rose-500 rounded-lg shadow-lg shadow-rose-500/30"><Sparkles className="text-white w-3 h-3" /></div>
+                      <span className="text-[10px] font-black text-white uppercase tracking-widest bg-white/10 backdrop-blur-md px-3 py-1 rounded-full border border-white/20">Elite Program Moments</span>
+                    </div>
+                    <h4 className="text-2xl md:text-4xl font-black text-white tracking-tight italic">Program Captured</h4>
+                    <p className="text-white/60 text-xs md:text-sm font-medium mt-1">Growth and memories across all cohorts...</p>
                   </div>
                 </div>
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center text-white/20 gap-4">
                   <ImageIcon size={48} className="animate-pulse" />
-                  <p className="text-sm font-black uppercase tracking-[0.2em]">Syncing Drive Library...</p>
+                  <p className="text-xs font-black uppercase tracking-[0.3em]">Syncing Drive Library</p>
                 </div>
               )}
               
-              {/* Progress Bar Sync */}
-              <div className="absolute bottom-0 left-0 h-1.5 bg-rose-500/20 w-full">
-                <div key={currentDisplayImage} className="h-full bg-rose-500 shadow-[0_0_10px_#f43f5e] animate-[progress_5s_linear_forwards]" />
+              <div className="absolute bottom-0 left-0 h-1.5 bg-white/5 w-full z-40">
+                <div key={currentDisplayImage} className="h-full bg-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.8)] animate-[progress_5s_linear_forwards]" />
               </div>
             </div>
 
@@ -284,15 +270,15 @@ export const Home: React.FC<HomeProps> = ({
           {/* Right Column */}
           <div className="lg:col-span-4 flex flex-col gap-6">
             <div className="bg-white dark:bg-gray-800 rounded-[2rem] p-8 shadow-xl border border-gray-100 dark:border-gray-700">
-              <h2 className="text-xl font-black text-gray-900 dark:text-white mb-1">Completion Rates</h2>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-8">Performance Benchmark</p>
+              <h2 className="text-xl font-black text-gray-900 dark:text-white mb-1 uppercase tracking-tighter">Benchmarks</h2>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-8">Program Standards</p>
               <div className="space-y-6">
                 {[
                   { label: 'Attendance', val: metrics.Overall_Attendance_Rate, color: 'text-emerald-500', icon: CheckCircle, bg: 'bg-emerald-500/10' },
                   { label: 'Submissions', val: metrics.Overall_Submission_Rate, color: 'text-blue-500', icon: FileText, bg: 'bg-blue-500/10' },
                   { label: 'GPA Score', val: metrics.Average_GPA * 100, color: 'text-purple-500', icon: Award, bg: 'bg-purple-500/10' }
                 ].map((item, i) => (
-                  <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700">
+                  <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700 shadow-sm transition-all hover:bg-white dark:hover:bg-gray-800">
                     <div className="flex items-center space-x-4 text-left">
                       <div className={`p-2 rounded-xl ${item.bg} ${item.color}`}><item.icon size={20} /></div>
                       <span className="font-bold text-gray-700 dark:text-gray-200 text-sm">{item.label}</span>
@@ -307,8 +293,8 @@ export const Home: React.FC<HomeProps> = ({
               <h3 className="text-lg font-black text-gray-900 dark:text-white mb-6 uppercase tracking-tight">Active Curriculum</h3>
               <div className="grid grid-cols-2 gap-4 mb-8">
                 {modules.map(mod => (
-                  <div key={mod} className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-transparent hover:border-indigo-500 transition-all cursor-default">
-                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center mb-3 text-indigo-600 font-black text-xs">
+                  <div key={mod} className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-transparent hover:border-indigo-500 transition-all cursor-default group">
+                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center mb-3 text-indigo-600 font-black text-xs group-hover:scale-110 transition-transform">
                       {mod.substring(0, 3)}
                     </div>
                     <span className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-tighter">{mod}</span>
@@ -317,13 +303,13 @@ export const Home: React.FC<HomeProps> = ({
               </div>
               <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4">Cohort Distribution</h3>
               <div className="space-y-4">
-                {cohortDistribution.map(c => (
+                {cohortDist.map(c => (
                   <div key={c.name} className="space-y-1">
                     <div className="flex items-center justify-between text-xs font-bold">
-                      <span className="text-gray-600 dark:text-gray-400">{c.name}</span>
+                      <span className="text-gray-600 dark:text-gray-400 font-black">{c.name}</span>
                       <span className="text-gray-900 dark:text-white font-black">{c.students} Learners</span>
                     </div>
-                    <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden shadow-inner">
                       <div className="h-full bg-indigo-500 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.5)]" style={{ width: `${(c.students / learners.length) * 100}%` }}></div>
                     </div>
                   </div>
@@ -334,11 +320,32 @@ export const Home: React.FC<HomeProps> = ({
         </div>
       </div>
 
+      {/* --- ELEGANT ENLARGE MODAL --- */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4 md:p-10 animate-in fade-in zoom-in duration-300"
+          onClick={() => setSelectedImage(null)}
+        >
+          <button 
+            className="absolute top-6 right-6 p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all z-[110] border border-white/20 shadow-2xl"
+            onClick={(e) => { e.stopPropagation(); setSelectedImage(null); }}
+          >
+            <X size={28} />
+          </button>
+          <img 
+            src={selectedImage} 
+            alt="Full Preview" 
+            className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.8)] border-4 border-white/10" 
+            referrerPolicy="no-referrer" 
+          />
+          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 text-center text-white/40 text-[10px] font-black tracking-[0.5em] uppercase pointer-events-none w-full px-4">
+            Elite Data Analytics Program Moment
+          </div>
+        </div>
+      )}
+
       <style>{`
-        @keyframes progress {
-          from { width: 0%; }
-          to { width: 100%; }
-        }
+        @keyframes progress { from { width: 0%; } to { width: 100%; } }
       `}</style>
       
       <BottomNav currentView={currentView} onNavigate={onNavigate} />

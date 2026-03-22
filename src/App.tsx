@@ -22,7 +22,7 @@ import { TimeMarquee } from './components/TimeMarquee';
 import { fetchSheetData, getStoredGIDs } from './services/GoogleSheetService';
 import { transformAttendance, transformPractice, transformProjects, calculateOverallMetrics } from './services/DataTransformer';
 import { AppState, ViewType, TransformedAttendance, TransformedPractice, TransformedProject, Learner, AlumniProject, AllCohortsPhoto, CohortImage } from './types';
-import { Loader2, Download, PlayCircle } from 'lucide-react';
+import { Loader2, Download, PlayCircle, Moon, Sun } from 'lucide-react'; // Added Moon/Sun icons
 import { exportDashboardToPDF } from './utils/pdfExport';
 
 // --- Helpers ---
@@ -51,6 +51,11 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [isAutoReportOpen, setIsAutoReportOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  
+  // Local state for theme to sync the toggle button immediately
+  const [currentTheme, setCurrentTheme] = useState<'light' | 'dark'>(
+    (localStorage.getItem('app_theme') as 'light' | 'dark') || 'dark'
+  );
 
   // Data states
   const [attendanceData, setAttendanceData] = useState<TransformedAttendance[]>([]);
@@ -61,10 +66,11 @@ export default function App() {
   const [cohortPhotos, setCohortPhotos] = useState<AllCohortsPhoto[]>([]);
   const [cohortImages, setCohortImages] = useState<CohortImage[]>([]);
 
-  // --- Theme Listener ---
+  // --- Theme Listener & Initial Apply ---
   useEffect(() => {
     const applyTheme = () => {
       const theme = localStorage.getItem('app_theme') || 'dark';
+      setCurrentTheme(theme as 'light' | 'dark');
       if (theme === 'dark') {
         document.documentElement.classList.add('dark');
       } else {
@@ -79,6 +85,23 @@ export default function App() {
       window.removeEventListener('settings_updated', applyTheme);
     };
   }, []);
+
+  // --- Toggle Theme Function ---
+  const toggleTheme = () => {
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('app_theme', newTheme);
+    
+    // Notify application
+    window.dispatchEvent(new Event('settings_updated'));
+    
+    // Explicitly update class for immediate feedback if event is slow
+    if (newTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    setCurrentTheme(newTheme);
+  };
 
   const normalizeCohort = (c: string | null) => {
     if (!c) return '';
@@ -252,9 +275,7 @@ export default function App() {
     );
 
     switch (state.currentView) {
-      // 1. Dashboards
       case 'Portal': return <Portal metrics={metrics} onNavigate={handleSelectView} currentView={state.currentView} />;
-      
       case 'Home': return (
         <Home 
           metrics={metrics} 
@@ -266,45 +287,21 @@ export default function App() {
           currentView={state.currentView} 
         />
       );
-
       case 'Attendance': return <Attendance metrics={metrics} learners={filteredLearners} attendanceData={filteredAtt} cohortPhotos={cohortPhotos} onNavigate={handleSelectView} currentView={state.currentView} />;
       case 'Practices': return <Practices metrics={metrics} learners={filteredLearners} practiceData={filteredPrac} onNavigate={handleSelectView} currentView={state.currentView} />;
       case 'Learners': return <Learners metrics={metrics} learners={filteredLearners} attendanceData={filteredAtt} practiceData={filteredPrac} cohortPhotos={cohortPhotos} onNavigate={handleSelectView} currentView={state.currentView} />;
       case 'Alumni': return <Alumni metrics={metrics} learners={filteredLearners} attendanceData={filteredAtt} practiceData={filteredPrac} cohortPhotos={cohortPhotos} onNavigate={handleSelectView} currentView={state.currentView} />;
       case 'Projects': return <Projects metrics={metrics} learners={filteredLearners} projectData={filteredProj} alumniProjects={alumniProjects} onNavigate={handleSelectView} currentView={state.currentView} />;
-      
-      case 'Mentors': return (
-        <Mentors 
-          metrics={metrics} 
-          learners={filteredLearners} 
-          attendanceData={filteredAtt} 
-          practiceData={filteredPrac}
-          cohortPhotos={cohortPhotos} 
-          onNavigate={handleSelectView} 
-          currentView={state.currentView} 
-        />
-      );
-
+      case 'Mentors': return <Mentors metrics={metrics} learners={filteredLearners} attendanceData={filteredAtt} practiceData={filteredPrac} cohortPhotos={cohortPhotos} onNavigate={handleSelectView} currentView={state.currentView} />;
       case 'About': return <About metrics={metrics} learners={filteredLearners} cohortPhotos={cohortPhotos} onNavigate={handleSelectView} currentView={state.currentView} />;
-      
-      /* RESTORED: The Projecters connection */
       case 'Projecters': return <Projecters onNavigate={handleSelectView} currentView={state.currentView} learners={learners} />;
-
-      // 2. Hidden Master Database Table Views
-      case 'Attendance Table' as any:
-        return <DataTable columns={['NAME', 'COHORT_NO', 'MODULE', 'Total_Lesson_Sum', 'Overall_Sum', 'Attendance_Rate']} data={filteredAtt} />;
+      case 'Attendance Table' as any: return <DataTable columns={['NAME', 'COHORT_NO', 'MODULE', 'Total_Lesson_Sum', 'Overall_Sum', 'Attendance_Rate']} data={filteredAtt} />;
       case 'Class Practice':
-      case 'Home Practice':
-        return <DataTable columns={['NAME', 'COHORT_NO', 'MODULE', 'TYPE', 'Total_Required', 'Total_Submitted', 'Rate_of_Submission', 'Average_DayDiff']} data={filteredPrac} />;
-      case 'Summary Projects':
-        return <DataTable columns={['NAME', 'COHORT_NO', 'MODULE', 'Status', 'DayDiff', 'GPA']} data={filteredProj} />;
-      case 'Alumni Projects':
-        return <ImageGrid alumniProjects={alumniProjects} />;
-      case 'Profiles':
-        return <Profiles learners={filteredLearners} cohortPhotos={cohortPhotos} alumniProjects={alumniProjects} cohortImages={cohortImages} />;
-      case 'Learners Detail':
-        return <DataTable columns={['NAME', 'COMPANY', 'DESIGNATION', 'Address', 'Cellphone_No', 'Email_Add', 'LinkedIn_url', 'Facebook_url', 'COHORT_NO']} data={filteredLearners} />;
-
+      case 'Home Practice': return <DataTable columns={['NAME', 'COHORT_NO', 'MODULE', 'TYPE', 'Total_Required', 'Total_Submitted', 'Rate_of_Submission', 'Average_DayDiff']} data={filteredPrac} />;
+      case 'Summary Projects': return <DataTable columns={['NAME', 'COHORT_NO', 'MODULE', 'Status', 'DayDiff', 'GPA']} data={filteredProj} />;
+      case 'Alumni Projects': return <ImageGrid alumniProjects={alumniProjects} />;
+      case 'Profiles': return <Profiles learners={filteredLearners} cohortPhotos={cohortPhotos} alumniProjects={alumniProjects} cohortImages={cohortImages} />;
+      case 'Learners Detail': return <DataTable columns={['NAME', 'COMPANY', 'DESIGNATION', 'Address', 'Cellphone_No', 'Email_Add', 'LinkedIn_url', 'Facebook_url', 'COHORT_NO']} data={filteredLearners} />;
       default: return <Portal metrics={metrics} onNavigate={handleSelectView} currentView={state.currentView} />;
     }
   };
@@ -326,7 +323,17 @@ export default function App() {
             <button onClick={() => setIsAutoReportOpen(true)} className="flex items-center px-3 py-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-100 transition-colors">
               <PlayCircle className="w-4 h-4 mr-1.5" /> Auto Report
             </button>
-            <button onClick={handleDownloadPDF} disabled={isExporting} className="p-2 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-full shadow-sm">
+            
+            {/* ELEGANT THEME TOGGLE SWITCH */}
+            <button 
+              onClick={toggleTheme}
+              className="p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-indigo-600 dark:text-indigo-400"
+              title={currentTheme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            >
+              {currentTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+
+            <button onClick={handleDownloadPDF} disabled={isExporting} className="p-2 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-full shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all">
               {isExporting ? <Loader2 className="w-4 h-4 animate-spin text-indigo-600" /> : <Download className="w-4 h-4 text-indigo-600" />}
             </button>
           </div>
