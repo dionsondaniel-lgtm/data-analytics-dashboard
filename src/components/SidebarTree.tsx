@@ -76,7 +76,7 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({
         <NavItem icon={Briefcase} label="Mentors" active={currentView === 'Mentors'} onClick={() => { onSelectView('Mentors'); onMobileClose?.(); }} />
         <NavItem icon={Sparkles} label="Projecters" active={currentView === 'Projecters'} onClick={() => { onSelectView('Projecters'); onMobileClose?.(); }} />
         <NavItem icon={Info} label="About" active={currentView === 'About'} onClick={() => { onSelectView('About'); onMobileClose?.(); }} />
-
+        <NavItem icon={HelpCircle} label="User Manual" active={currentView === 'User Manual'} onClick={() => { onSelectView('User Manual'); onMobileClose?.(); }} />
         {/* Lock/Unlock Toggle */}
         <div className="pt-2 pb-2 border-t border-gray-200 dark:border-gray-800 mt-4">
           <NavItem 
@@ -103,7 +103,6 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({
             <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
               <h3 className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Config</h3>
               <NavItem icon={Settings} label="GID Settings" active={currentView === 'Settings'} onClick={() => { onSelectView('Settings'); onMobileClose?.(); }} />
-              <NavItem icon={HelpCircle} label="User Manual" active={currentView === 'User Manual'} onClick={() => { onSelectView('User Manual'); onMobileClose?.(); }} />
             </div>
           </div>
         )}

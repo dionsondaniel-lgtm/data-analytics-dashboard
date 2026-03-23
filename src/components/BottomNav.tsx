@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, Home, CheckSquare, FileText, 
   Award, Users, Image as ImageIcon, Briefcase, 
-  Plus, X, Sparkles, Info 
+  Plus, X, Sparkles, Info , HelpCircle
 } from 'lucide-react';
 import { ViewType } from '../types';
 
@@ -26,6 +26,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate })
     { title: 'Mentors', icon: Briefcase },
     { title: 'Projecters', icon: Sparkles },
     { title: 'About', icon: Info },
+    { title: 'User Manual', icon: HelpCircle },
   ];
 
   const toggleModal = () => setIsOpen(!isOpen);

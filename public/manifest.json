@@ -1,11 +1,6 @@
 {
   "name": "Data Analytics Dashboard",
-  "short_name": "Dashboard",
-  "description": "A dashboard for tracking learner progress and metrics.",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#4f46e5",
+  "short_name": "DA Dashboard",
   "icons": [
     {
       "src": "/icon.svg",
@@ -15,9 +10,13 @@
     },
     {
       "src": "/icon.svg",
-      "sizes": "192x192",
+      "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4f46e5"
 }
