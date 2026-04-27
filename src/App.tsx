@@ -1,3 +1,5 @@
+// src/App.tsx
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { DashboardLayout } from './components/DashboardLayout';
 import { MetricsOverview } from './components/MetricsOverview';
@@ -19,21 +21,22 @@ import { Mentors } from './components/Mentors';
 import { About } from './components/About';
 import Projecters from './components/Projecters';
 import { TimeMarquee } from './components/TimeMarquee';
+import { AIAgents } from './components/AIAgents';
 import { fetchSheetData, getStoredGIDs } from './services/GoogleSheetService';
 import { transformAttendance, transformPractice, transformProjects, calculateOverallMetrics } from './services/DataTransformer';
 import { AppState, ViewType, TransformedAttendance, TransformedPractice, TransformedProject, Learner, AlumniProject, AllCohortsPhoto, CohortImage } from './types';
-import { Loader2, Download, PlayCircle, Moon, Sun } from 'lucide-react'; // Added Moon/Sun icons
+import { Loader2, Download, PlayCircle, Moon, Sun } from 'lucide-react';
 import { exportDashboardToPDF } from './utils/pdfExport';
 
 // --- Helpers ---
-export const getDriveImageUrl = (url: string) => {
+export const getDriveImageUrl = (url: string): string | null => {
   if (!url) return null;
   const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
   if (match && match[1]) return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
   return null;
 };
 
-export const getHDImageUrl = (url: string) => {
+export const getHDImageUrl = (url: string): string => {
   if (!url) return '';
   if (url.includes('drive.google.com/thumbnail') && !url.includes('sz=')) return `${url}&sz=w1000`;
   return url;
@@ -50,6 +53,7 @@ export default function App() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isAutoReportOpen, setIsAutoReportOpen] = useState(false);
+  const [isAIAgentsOpen, setIsAIAgentsOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   
   // Local state for theme to sync the toggle button immediately
@@ -94,7 +98,6 @@ export default function App() {
     // Notify application
     window.dispatchEvent(new Event('settings_updated'));
     
-    // Explicitly update class for immediate feedback if event is slow
     if (newTheme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
@@ -139,7 +142,7 @@ export default function App() {
         Project: row['Project'] || '',
         Status: row['Status'] || '',
         Project_Image_Ref: row['Project Image Ref'] || '',
-        Project_Image_Url: getHDImageUrl(row['Project Image Url'] || '') || getDriveImageUrl(row['Project Image Ref'] || ''),
+        Project_Image_Url: getHDImageUrl(row['Project Image Url'] || '') || getDriveImageUrl(row['Project Image Ref'] || '') || '',
         Staff_1_to_10: row['Staff_1_to_10'] || ''
       })));
 
@@ -147,14 +150,14 @@ export default function App() {
         NAME: row['NAME'] || '',
         COMPANY: row['COMPANY'] || '',
         REF_1: row['REF 1'] || '',
-        IMAGE_URL: getHDImageUrl(row['IMAGE URL'] || '') || getDriveImageUrl(row['REF 1'] || ''),
+        IMAGE_URL: getHDImageUrl(row['IMAGE URL'] || '') || getDriveImageUrl(row['REF 1'] || '') || '',
         COHORT_NO: String(row['COHORT NO.'] || row['COHORT_NO'] || '').toUpperCase()
       })));
 
       setCohortImages((cohortImagesRaw as any[]).map(row => ({
         Cohort_no: String(row['Cohort no.'] || row['Cohort_no'] || '').toUpperCase(),
         Reference: row['Reference'] || '',
-        image_url: getHDImageUrl(row['image_url'] || '') || getDriveImageUrl(row['Reference'] || '')
+        image_url: getHDImageUrl(row['image_url'] || '') || getDriveImageUrl(row['Reference'] || '') || ''
       })));
 
       const attData: TransformedAttendance[] = [];
@@ -232,7 +235,7 @@ export default function App() {
   const filteredPrac = practiceData.filter(d => 
     (!selCohort || normalizeCohort(d.COHORT_NO) === selCohort) &&
     (!selModule || d.MODULE.toUpperCase() === selModule) &&
-    (state.currentView === 'Class Practice' || state.currentView === 'Home Practice' ? d.TYPE === state.currentView : true)
+    ((state.currentView as string) === 'Class Practice' || (state.currentView as string) === 'Home Practice' ? d.TYPE === (state.currentView as string) : true)
   );
 
   const filteredProj = projectData.filter(d => 
@@ -295,13 +298,15 @@ export default function App() {
       case 'Mentors': return <Mentors metrics={metrics} learners={filteredLearners} attendanceData={filteredAtt} practiceData={filteredPrac} cohortPhotos={cohortPhotos} onNavigate={handleSelectView} currentView={state.currentView} />;
       case 'About': return <About metrics={metrics} learners={filteredLearners} cohortPhotos={cohortPhotos} onNavigate={handleSelectView} currentView={state.currentView} />;
       case 'Projecters': return <Projecters onNavigate={handleSelectView} currentView={state.currentView} learners={learners} />;
+      
       case 'Attendance Table' as any: return <DataTable columns={['NAME', 'COHORT_NO', 'MODULE', 'Total_Lesson_Sum', 'Overall_Sum', 'Attendance_Rate']} data={filteredAtt} />;
-      case 'Class Practice':
-      case 'Home Practice': return <DataTable columns={['NAME', 'COHORT_NO', 'MODULE', 'TYPE', 'Total_Required', 'Total_Submitted', 'Rate_of_Submission', 'Average_DayDiff']} data={filteredPrac} />;
-      case 'Summary Projects': return <DataTable columns={['NAME', 'COHORT_NO', 'MODULE', 'Status', 'DayDiff', 'GPA']} data={filteredProj} />;
-      case 'Alumni Projects': return <ImageGrid alumniProjects={alumniProjects} />;
-      case 'Profiles': return <Profiles learners={filteredLearners} cohortPhotos={cohortPhotos} alumniProjects={alumniProjects} cohortImages={cohortImages} />;
-      case 'Learners Detail': return <DataTable columns={['NAME', 'COMPANY', 'DESIGNATION', 'Address', 'Cellphone_No', 'Email_Add', 'LinkedIn_url', 'Facebook_url', 'COHORT_NO']} data={filteredLearners} />;
+      case 'Class Practice' as any:
+      case 'Home Practice' as any: return <DataTable columns={['NAME', 'COHORT_NO', 'MODULE', 'TYPE', 'Total_Required', 'Total_Submitted', 'Rate_of_Submission', 'Average_DayDiff']} data={filteredPrac} />;
+      case 'Summary Projects' as any: return <DataTable columns={['NAME', 'COHORT_NO', 'MODULE', 'Status', 'DayDiff', 'GPA']} data={filteredProj} />;
+      case 'Alumni Projects' as any: return <ImageGrid alumniProjects={alumniProjects} />;
+      case 'Profiles' as any: return <Profiles learners={filteredLearners} cohortPhotos={cohortPhotos} alumniProjects={alumniProjects} cohortImages={cohortImages} />;
+      case 'Learners Detail' as any: return <DataTable columns={['NAME', 'COMPANY', 'DESIGNATION', 'Address', 'Cellphone_No', 'Email_Add', 'LinkedIn_url', 'Facebook_url', 'COHORT_NO']} data={filteredLearners} />;
+      
       default: return <Portal metrics={metrics} onNavigate={handleSelectView} currentView={state.currentView} />;
     }
   };
@@ -318,13 +323,14 @@ export default function App() {
         onSelectCohort={(c) => setState(s => ({ ...s, selectedCohort: c }))}
         onSelectModule={(m) => setState(s => ({ ...s, selectedModule: m }))}
         availableCohorts={availableCohorts}
+        onToggleAIAgent={() => setIsAIAgentsOpen(!isAIAgentsOpen)}
+        isAIAgentOpen={isAIAgentsOpen}
         headerActions={(
           <div className="flex items-center space-x-2">
             <button onClick={() => setIsAutoReportOpen(true)} className="flex items-center px-3 py-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-100 transition-colors">
               <PlayCircle className="w-4 h-4 mr-1.5" /> Auto Report
             </button>
             
-            {/* ELEGANT THEME TOGGLE SWITCH */}
             <button 
               onClick={toggleTheme}
               className="p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-indigo-600 dark:text-indigo-400"
@@ -342,7 +348,18 @@ export default function App() {
       >
         {renderContent()}
       </DashboardLayout>
+
       <AutoReport isOpen={isAutoReportOpen} onClose={() => setIsAutoReportOpen(false)} metrics={metrics} filters={{ cohort: state.selectedCohort, module: state.selectedModule }} />
+      
+      <AIAgents 
+        isOpen={isAIAgentsOpen} 
+        onClose={() => setIsAIAgentsOpen(false)}
+        metrics={metrics}
+        learners={filteredLearners} // Contains Cohorts, Names
+        attendanceData={filteredAtt} // Contains Attendance logs
+        practiceData={filteredPrac} // Contains Practice logs
+        projectData={filteredProj} // INJECTED HERE: Contains GPAs required by Aura to calc Top Performers
+      />
     </div>
   );
 }

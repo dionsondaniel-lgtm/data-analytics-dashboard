@@ -1,7 +1,9 @@
+// src/components/DashboardLayout.tsx
+
 import React, { ReactNode, useEffect, useState } from 'react';
 import { SidebarTree } from './SidebarTree';
 import { ViewType } from '../types';
-import { Menu, X, ChevronLeft, ChevronRight, Filter, Layers, BookOpen } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Filter, Layers, BookOpen, X, Sparkles } from 'lucide-react';
 import { clsx } from 'clsx';
 
 interface DashboardLayoutProps {
@@ -15,6 +17,8 @@ interface DashboardLayoutProps {
   availableCohorts?: string[];
   headerActions?: ReactNode;
   subHeader?: ReactNode;
+  onToggleAIAgent?: () => void;
+  isAIAgentOpen?: boolean;
 }
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
@@ -27,7 +31,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   onSelectModule,
   availableCohorts = ['1', '2', '3', '4', '5'],
   headerActions,
-  subHeader
+  subHeader,
+  onToggleAIAgent,
+  isAIAgentOpen
 }) => {
   const [bgImage, setBgImage] = useState('https://t4.ftcdn.net/jpg/07/49/21/07/360_F_749210788_1LKxjjOHZPsJZwDOclb8D0Y5UsT20blt.jpg');
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768);
@@ -45,17 +51,13 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Listen for storage changes to update background immediately
   useEffect(() => {
     const updateBg = () => {
       setBgImage(localStorage.getItem('app_bg') || 'https://t4.ftcdn.net/jpg/07/49/21/07/360_F_749210788_1LKxjjOHZPsJZwDOclb8D0Y5UsT20blt.jpg');
     };
     
     updateBg();
-    
-    // Custom event listener for when settings are saved within the app
     window.addEventListener('settings_updated', updateBg);
-    // Standard storage listener for cross-tab updates
     window.addEventListener('storage', updateBg);
     
     return () => {
@@ -74,12 +76,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         backgroundAttachment: 'fixed'
       } : {}}
     >
-      {/* Background overlay for readability */}
       {bgImage && (
         <div className="absolute inset-0 bg-white/85 dark:bg-gray-900/90 pointer-events-none z-0 transition-colors duration-200"></div>
       )}
       
-      {/* Mobile Overlay */}
       {isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-20 md:hidden"
@@ -87,7 +87,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         />
       )}
 
-      {/* Boundary Toggle Button */}
       <button
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
         className={clsx(
@@ -137,10 +136,28 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               {children}
             </div>
 
-            {/* Floating Global Filters */}
-            <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+            {/* Floating Global Buttons */}
+            <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+              
+              {/* --- AI AGENT BUTTON --- */}
+              <button
+                onClick={() => onToggleAIAgent?.()}
+                className={clsx(
+                  "p-3 rounded-full shadow-2xl transition-all duration-300 flex items-center justify-center relative overflow-hidden group",
+                  isAIAgentOpen 
+                    ? "bg-slate-800 text-white scale-110 ring-4 ring-indigo-500/50" 
+                    : "bg-slate-900 text-white hover:scale-110 hover:shadow-indigo-500/50"
+                )}
+                title="Open AI Agents"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity animate-spin-slow" style={{ margin: '-50%' }} />
+                <div className="absolute inset-[2px] bg-slate-900 rounded-full z-0" />
+                <Sparkles className="w-6 h-6 z-10 text-indigo-400 group-hover:text-white transition-colors" />
+              </button>
+
+              {/* Existing Filters UI */}
               {isFiltersOpen && (
-                <div className="mb-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl w-64 overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-300">
+                <div className="mb-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl w-64 overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-300">
                   <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/50">
                     <h3 className="font-semibold text-sm text-gray-900 dark:text-white flex items-center">
                       <Filter className="w-4 h-4 mr-2 text-indigo-500" />
@@ -155,7 +172,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                   </div>
                   
                   <div className="p-2 max-h-80 overflow-y-auto scrollbar-elegant">
-                    {/* Cohort Filters */}
                     <div className="mb-4">
                       <div className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 flex items-center uppercase tracking-wider">
                         <Layers className="w-3 h-3 mr-2" />
@@ -190,7 +206,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                       </div>
                     </div>
 
-                    {/* Module Filters */}
                     <div>
                       <div className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 flex items-center uppercase tracking-wider">
                         <BookOpen className="w-3 h-3 mr-2" />

@@ -14,7 +14,7 @@ export default defineConfig(({mode}) => {
         registerType: 'autoUpdate',
         manifest: {
           name: 'Data Analytics Dashboard',
-          short_name: 'DA Dashboard',
+          short_name: 'Dashboard',
           theme_color: '#ffffff',
           icons: [
             {
