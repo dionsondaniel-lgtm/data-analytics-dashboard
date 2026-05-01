@@ -255,10 +255,11 @@ export const RechartsViews: React.FC<RechartsViewsProps> = ({
                 margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                 onClick={(e) => {
                   if (onSelectModule && e?.activeLabel) {
-                    if (selectedModule === e.activeLabel) {
+                    const label = String(e.activeLabel);
+                    if (selectedModule === label) {
                       onSelectModule(null);
                     } else {
-                      onSelectModule(e.activeLabel);
+                      onSelectModule(label);
                     }
                   }
                 }}
@@ -292,10 +293,11 @@ export const RechartsViews: React.FC<RechartsViewsProps> = ({
                 margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                 onClick={(e) => {
                   if (onSelectModule && e?.activeLabel) {
-                    if (selectedModule === e.activeLabel) {
+                    const label = String(e.activeLabel);
+                    if (selectedModule === label) {
                       onSelectModule(null);
                     } else {
-                      onSelectModule(e.activeLabel);
+                      onSelectModule(label);
                     }
                   }
                 }}
@@ -329,10 +331,11 @@ export const RechartsViews: React.FC<RechartsViewsProps> = ({
                 margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                 onClick={(e) => {
                   if (onSelectModule && e?.activeLabel) {
-                    if (selectedModule === e.activeLabel) {
+                    const label = String(e.activeLabel);
+                    if (selectedModule === label) {
                       onSelectModule(null);
                     } else {
-                      onSelectModule(e.activeLabel);
+                      onSelectModule(label);
                     }
                   }
                 }}
@@ -371,10 +374,11 @@ export const RechartsViews: React.FC<RechartsViewsProps> = ({
                 margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                 onClick={(e) => {
                   if (onSelectModule && e?.activeLabel) {
-                    if (selectedModule === e.activeLabel) {
+                    const label = String(e.activeLabel);
+                    if (selectedModule === label) {
                       onSelectModule(null);
                     } else {
-                      onSelectModule(e.activeLabel);
+                      onSelectModule(label);
                     }
                   }
                 }}
