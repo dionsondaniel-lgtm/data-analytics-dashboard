@@ -193,12 +193,13 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     Abstract/Summary Provided: ${presentationTopic || 'Refer entirely to the attached document.'}
     
     INSTRUCTIONS:
-    Read the attached document carefully. Base your questions on actual numbers, facts, metrics, or claims found in the document or abstract.
+    Read the attached document carefully. 
+    IMPORTANT "EASY MODE": Keep the questions VERY EASY, beginner-friendly, and simple to answer live. Avoid overly complex, tricky, or highly advanced technical queries.
     
-    Act as these 3 characters and write ONE specific question each:
-    1. Techy Eve: Highly technical ${selectedModule} question referencing a metric/data point.
-    2. CEO Zeus: Executive question focusing on business impact, ROI, or costs.
-    3. Nontechnical Alto: Beginner-friendly question to clarify a specific trend or jargon.
+    Act as these 3 characters and write ONE specific, easy-to-answer question each:
+    1. Techy Eve: A simple, basic-level technical question asking how they used ${selectedModule} (e.g., a basic function, tool, or general process they applied).
+    2. CEO Zeus: A straightforward, easy business question about the general outcome, main goal, or a basic metric mentioned.
+    3. Nontechnical Alto: A very friendly, simple question asking them to summarize their main takeaway or share their favorite part of the project.
     
     Return EXACTLY a raw JSON object with keys "eve", "zeus", and "alto". Do not use markdown wrappers.`;
 
@@ -211,15 +212,15 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
       
       const parsed = JSON.parse(match[0]);
       setGeneratedQuestions({
-        eve: parsed.eve || `Can you demonstrate your technical skills using ${selectedModule} for this data?`,
-        zeus: parsed.zeus || "How does this impact our quarterly ROI?",
-        alto: parsed.alto || "Can you explain this to me like I'm a beginner?"
+        eve: parsed.eve || `Can you briefly explain how you used ${selectedModule} to get these results?`,
+        zeus: parsed.zeus || "What would you say is the biggest business benefit or main goal of your project?",
+        alto: parsed.alto || "If you had to summarize your presentation in one simple sentence, what would it be?"
       });
     } catch (e) {
       setGeneratedQuestions({
-        eve: `Based on your presentation, can you walk us through the ${selectedModule} methodology you used to extract this data?`,
-        zeus: `Looking at your findings, what is the direct business impact and projected ROI for the upcoming quarter?`,
-        alto: `I'm a bit confused by the jargon. Can you summarize your main takeaway in simple, plain English?`
+        eve: `Can you briefly explain how you used ${selectedModule} to get these results?`,
+        zeus: `What would you say is the biggest business benefit or main goal of your project?`,
+        alto: `If you had to summarize your presentation in one simple sentence, what would it be?`
       });
     }
 
@@ -274,7 +275,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
       Presenter's Answer: ${answers.alto}
     
     INSTRUCTIONS:
-    1. Evaluate answers based on Technical Accuracy, Business Value, and Clarity.
+    1. Evaluate answers based on Technical Accuracy, Business Value, and Clarity. Note that this was evaluated in "Easy Mode", so grade generously if they answered reasonably well.
     2. Grade the presenter (0-100%).
     3. Act as "The Judge" (Chief Overseer). Provide a final average score and a detailed verdict referencing specific metrics.
     4. Evaluate the Panelists: Who asked the best question? Who was too harsh?
