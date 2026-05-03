@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, UploadCloud, File as FileIcon, Play, Terminal, Briefcase, HelpCircle, 
-  Gavel, Mail, Sparkles, Loader2, Download, Table, BarChart3, Code2, Database, ShieldCheck, Lock, CheckCircle2, UserCircle, Info, FileText, RefreshCw
+  Gavel, Mail, Sparkles, Loader2, Download, Table, BarChart3, Code2, Database, ShieldCheck, Lock, CheckCircle2, UserCircle, Info, FileText, RefreshCw, ArrowRight
 } from 'lucide-react';
 import { Learner } from '../types';
 
@@ -29,6 +29,8 @@ const MODULE_OPTIONS =[
   { id: 'Python', label: 'Python Analytics', icon: Code2 },
 ];
 
+type AgentId = 'eve' | 'zeus' | 'alto';
+
 export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learners }) => {
   const [stage, setStage] = useState<'intro' | 'upload' | 'qna' | 'grading'>('intro');
   const[isProcessing, setIsProcessing] = useState(false);
@@ -46,15 +48,17 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const[fileBase64, setFileBase64] = useState<{ data: string, mimeType: string } | null>(null);
 
-  // Q&A Data
+  // Q&A Data (Interactive Sequence)
   const [generatedQuestions, setGeneratedQuestions] = useState<{eve: string, zeus: string, alto: string} | null>(null);
-  const[answers, setAnswers] = useState({ eve: '', zeus: '', alto: '' });
+  const [answers, setAnswers] = useState({ eve: '', zeus: '', alto: '' });
+  const [qnaOrder, setQnaOrder] = useState<AgentId[]>([]);
+  const [currentQIndex, setCurrentQIndex] = useState(0);
   
   // Grading Data
   const [finalReport, setFinalReport] = useState<string>('');
   
   // Email Auth Data
-  const [emailStatus, setEmailStatus] = useState<'idle' | 'auth' | 'sending' | 'sent'>('idle');
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'auth' | 'generating' | 'sent'>('idle');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -93,6 +97,8 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
       setFileBase64(null);
       setGeneratedQuestions(null);
       setAnswers({ eve: '', zeus: '', alto: '' });
+      setQnaOrder([]);
+      setCurrentQIndex(0);
       setFinalReport('');
       setEmailStatus('idle');
       setShowLoginModal(false);
@@ -116,7 +122,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     }
   };
 
-  // --- ROBUST AI ENGINE CALLER WITH DYNAMIC AUTO-FALLBACK ---
+  // --- ROBUST AI ENGINE CALLER ---
   const callAI = async (prompt: string, speakerId: string, includeFile: boolean = false): Promise<string> => {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return "⚠️ API Key missing.";
@@ -152,16 +158,16 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
           });
           
           if (!res.ok) {
-            if (res.status === 429) break; // Quota Exceeded -> Switch Model
-            if (res.status === 503 && attempt === 0) { await delay(1500); attempt++; continue; } // Overloaded -> Retry once
-            if (res.status >= 400) break; // Bad Request (file too large) -> Switch Model
+            if (res.status === 429) break; 
+            if (res.status === 503 && attempt === 0) { await delay(1500); attempt++; continue; } 
+            if (res.status >= 400) break; 
             break;
           }
 
           const data = await res.json();
           responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
           modelSuccess = true;
-          if (activeModel !== model) setActiveModel(model); // Latch to successful model
+          if (activeModel !== model) setActiveModel(model);
           break;
         } catch (error) {
           if (attempt === 0) { await delay(1000); attempt++; continue; }
@@ -173,7 +179,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     return responseText || "⚠️ Neural failure. Unable to compute.";
   };
 
-  // --- STAGE 1: PROCESS PRESENTATION (ROBUST JSON PARSER) ---
+  // --- STAGE 1: PROCESS PRESENTATION & SHUFFLE PANELISTS ---
   const processPresentation = async () => {
     if (!presenterName || (!presentationTopic && !uploadedFile)) return;
     setIsProcessing(true);
@@ -187,23 +193,21 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     Abstract/Summary Provided: ${presentationTopic || 'Refer entirely to the attached document.'}
     
     INSTRUCTIONS:
-    Read the attached document carefully (if provided). You MUST base your questions on actual numbers, facts, metrics, or claims found in the document or abstract.
+    Read the attached document carefully. Base your questions on actual numbers, facts, metrics, or claims found in the document or abstract.
     
     Act as these 3 characters and write ONE specific question each:
-    1. Techy Eve (Lead Data Architect): Asks a highly technical ${selectedModule} question explicitly referencing a metric or data point from the presentation.
-    2. CEO Zeus: Asks an executive question focusing on the business impact, ROI, or costs directly mentioned in the presentation.
-    3. Nontechnical Alto: Asks a beginner-friendly question asking to clarify one of the specific trends or jargon terms presented.
+    1. Techy Eve: Highly technical ${selectedModule} question referencing a metric/data point.
+    2. CEO Zeus: Executive question focusing on business impact, ROI, or costs.
+    3. Nontechnical Alto: Beginner-friendly question to clarify a specific trend or jargon.
     
     Return EXACTLY a raw JSON object with keys "eve", "zeus", and "alto". Do not use markdown wrappers.`;
 
     const response = await callAI(prompt, 'Panel', true); 
     
     try {
-      if (response.includes("⚠️ Neural failure")) throw new Error("API Chain Failed completely.");
-      
-      // Powerful regex to find the JSON object even if Gemini wraps it in text or markdown
+      if (response.includes("⚠️ Neural failure")) throw new Error("API Chain Failed.");
       const match = response.match(/\{[\s\S]*\}/);
-      if (!match) throw new Error("No JSON object structure found in response.");
+      if (!match) throw new Error("No JSON structure found.");
       
       const parsed = JSON.parse(match[0]);
       setGeneratedQuestions({
@@ -212,21 +216,42 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
         alto: parsed.alto || "Can you explain this to me like I'm a beginner?"
       });
     } catch (e) {
-      console.warn("AI JSON parse failed or limits reached. Using silent fallbacks.", e);
-      // SILENT FALLBACK: If API completely fails, inject contextual questions automatically so user is never stuck
       setGeneratedQuestions({
         eve: `Based on your presentation, can you walk us through the ${selectedModule} methodology you used to extract this data?`,
         zeus: `Looking at your findings, what is the direct business impact and projected ROI for the upcoming quarter?`,
         alto: `I'm a bit confused by the jargon. Can you summarize your main takeaway in simple, plain English?`
       });
     }
+
+    // Randomize Panelist Order to create suspense
+    const agents: AgentId[] = ['eve', 'zeus', 'alto'];
+    const shuffled = [...agents].sort(() => Math.random() - 0.5);
     
+    setQnaOrder(shuffled);
+    setCurrentQIndex(0);
     setStage('qna');
     setIsProcessing(false);
-    setActiveSpeaker('Eve');
+    
+    const firstAgent = shuffled[0];
+    setActiveSpeaker(firstAgent.charAt(0).toUpperCase() + firstAgent.slice(1));
   };
 
-  // --- STAGE 2: GRADE (TEXT-ONLY TO PREVENT CRASHES) ---
+  // --- PROGRESSIVE Q&A HANDLER ---
+  const handleNextQuestion = () => {
+    const activeAgent = qnaOrder[currentQIndex];
+    if (!answers[activeAgent]) return;
+
+    if (currentQIndex < 2) {
+      const nextIndex = currentQIndex + 1;
+      setCurrentQIndex(nextIndex);
+      const nextAgent = qnaOrder[nextIndex];
+      setActiveSpeaker(nextAgent.charAt(0).toUpperCase() + nextAgent.slice(1));
+    } else {
+      submitAnswersAndGrade(true);
+    }
+  };
+
+  // --- STAGE 2: GRADE ---
   const submitAnswersAndGrade = async (useFile: boolean = true) => {
     setIsProcessing(true);
     setActiveSpeaker('System');
@@ -236,7 +261,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     const prompt = `You are evaluating a live ${selectedModule} data presentation defense.
     Date: ${currentDate}
     Presenter: ${presenterName}
-    Original Topic Summary: ${presentationTopic || 'Based entirely on the transcript below.'}
+    Topic Summary: ${presentationTopic || 'Based entirely on the transcript.'}
     
     TRANSCRIPT OF DEFENSE:
     - Techy Eve's Q: ${generatedQuestions?.eve}
@@ -249,16 +274,15 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
       Presenter's Answer: ${answers.alto}
     
     INSTRUCTIONS:
-    1. Evaluate the presenter's answers based on Technical Accuracy (Eve), Business Value (Zeus), and Clarity (Alto).
+    1. Evaluate answers based on Technical Accuracy, Business Value, and Clarity.
     2. Grade the presenter (0-100%).
-    3. Act as "The Judge" (Chief Overseer). Provide a final average score and a detailed verdict referencing the specific metrics from their presentation.
+    3. Act as "The Judge" (Chief Overseer). Provide a final average score and a detailed verdict referencing specific metrics.
     4. Evaluate the Panelists: Who asked the best question? Who was too harsh?
     
-    Format output as a highly professional Defense Summary Report. Include the Date (${currentDate}) at the very top. Do NOT use markdown bolding formatting (no **asterisks**). Do NOT include a signature block at the end, the system will append the official seal automatically.`;
+    Format output as a professional Defense Summary Report. Do NOT use bold markdown. Do NOT include a signature block at the end (the system appends the official seal).`;
 
     let report = await callAI(prompt, 'Judge', useFile);
     
-    // Auto-fallback if the PDF is too large for the grading stage
     if (useFile && report.includes('⚠️')) {
       console.warn("Retrying Judge without heavy file context...");
       report = await callAI(prompt, 'Judge', false);
@@ -272,6 +296,54 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     if (!report.includes('⚠️')) {
       setTimeout(() => handleDownload('pdf', report), 500); 
     }
+  };
+
+  // --- HELPER: GENERATE PDF AS BASE64 FOR EMAIL ATTACHMENT ---
+  const generatePDFBase64 = async (reportContent: string): Promise<string> => {
+    const { default: jsPDF } = await import('jspdf');
+    const doc = new jsPDF();
+    let y = 20;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    
+    const cleanReport = reportContent.replace(/========================================[\s\S]*The Chief Overseer/g, '').trim();
+    const splitText = doc.splitTextToSize(cleanReport, 180);
+    
+    splitText.forEach((line: string) => {
+      if (y > pageHeight - 20) { doc.addPage(); y = 20; }
+      doc.text(line, margin, y);
+      y += 6;
+    });
+    
+    y += 15;
+    if (y > pageHeight - 40) { doc.addPage(); y = 20; }
+    
+    doc.setDrawColor(200);
+    doc.line(margin, y, 195, y);
+    y += 15;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(204, 153, 0); 
+    doc.text("OFFICIAL SEAL OF THE JUDGE", 105, y, { align: 'center' });
+    y += 8;
+    
+    doc.setFont('times', 'italic');
+    doc.setFontSize(12);
+    doc.setTextColor(100, 100, 100);
+    doc.text("Signed,", 105, y, { align: 'center' });
+    y += 8;
+    
+    doc.setFont('times', 'bold');
+    doc.setFontSize(16);
+    doc.setTextColor(0, 0, 0);
+    doc.text("The Chief Overseer", 105, y, { align: 'center' });
+    
+    const dataUri = doc.output('datauristring');
+    return dataUri.split(',')[1];
   };
 
   // --- EXPORT HANDLERS ---
@@ -303,26 +375,17 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(11);
         
-        // Remove text signature for PDF so we can draw it elegantly
         const cleanReport = reportContent.replace(/========================================[\s\S]*The Chief Overseer/g, '').trim();
         const splitText = doc.splitTextToSize(cleanReport, 180);
         
-        // Manual Multi-page rendering loop
         splitText.forEach((line: string) => {
-          if (y > pageHeight - 20) {
-            doc.addPage();
-            y = 20;
-          }
+          if (y > pageHeight - 20) { doc.addPage(); y = 20; }
           doc.text(line, margin, y);
           y += 6;
         });
         
-        // Render UI-Like Elegant Signature 
         y += 15;
-        if (y > pageHeight - 40) { 
-          doc.addPage(); 
-          y = 20; 
-        }
+        if (y > pageHeight - 40) { doc.addPage(); y = 20; }
         
         doc.setDrawColor(200);
         doc.line(margin, y, 195, y);
@@ -330,7 +393,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
         
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(10);
-        doc.setTextColor(204, 153, 0); // Amber / Gold color
+        doc.setTextColor(204, 153, 0); 
         doc.text("OFFICIAL SEAL OF THE JUDGE", 105, y, { align: 'center' });
         y += 8;
         
@@ -350,7 +413,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     }
   };
 
-  // --- SECURE AUTH & DIRECT EMAIL ---
+  // --- ADVANCED SECURE AUTH & EML DRAFT GENERATOR ---
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginEmail || !loginPassword) return;
@@ -360,16 +423,98 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     setEmailStatus('auth');
     
     await delay(1500); 
-    setEmailStatus('sending');
-    await delay(2000); 
+    setEmailStatus('generating');
+    
+    // Generate Base64 PDF directly in memory
+    const pdfBase64 = await generatePDFBase64(finalReport);
+    
+    const boundary = "----=_Part_Nova_System_Boundary";
+    const subject = `[CONFIDENTIAL VERDICT] Final Defense Assessment - ${presenterName}`;
+    const to = "dionsondaniel@gmail.com, ehn@healthbio.online";
+    const filename = `${presenterName.replace(/\s+/g, '_')}_Defense_Report.pdf`;
+    
+    const emailBody = `The AI Panel has concluded its high-stakes live assessment of ${presenterName}'s presentation.
+
+We rigorously tested their technical architecture, business logic, and clarity under intense pressure. The final verdict contains critical insights regarding their performance. 
+
+Did they crack under pressure, or did they successfully defend their metrics? The verdict might surprise you.
+
+Please find the official PDF dossier attached to reveal the final score and comprehensive evaluation.
+
+Automated by TTSP Neural Core.
+Securely routed by: ${loginEmail}`;
+
+    // Construct raw EML Multipart string (Forces email client to open with Native Attachment)
+    const emlContent = `To: ${to}
+Subject: ${subject}
+X-Unsent: 1
+Content-Type: multipart/mixed; boundary="${boundary}"
+
+--${boundary}
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+${emailBody}
+
+--${boundary}
+Content-Type: application/pdf; name="${filename}"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="${filename}"
+
+${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
+--${boundary}--`;
+
+    const blob = new Blob([emlContent], { type: 'message/rfc822' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `Draft_Verdict_${presenterName.replace(/\s+/g, '_')}.eml`;
+    a.click();
+
+    await delay(1000);
     setEmailStatus('sent');
+  };
+
+  // --- UI RENDER HELPERS ---
+  const renderQuestionBox = (agentId: AgentId, isActive: boolean) => {
+    const config = {
+      eve: { name: 'Techy Eve', icon: Terminal, color: 'text-cyan-400', border: 'border-cyan-500/30', bg: 'bg-cyan-500', textColors: 'text-cyan-50', placeholder: 'Write your technical explanation here...' },
+      zeus: { name: 'CEO Zeus', icon: Briefcase, color: 'text-amber-400', border: 'border-amber-500/30', bg: 'bg-amber-500', textColors: 'text-amber-50', placeholder: 'Write your executive business answer here...' },
+      alto: { name: 'Alto', icon: HelpCircle, color: 'text-emerald-400', border: 'border-emerald-500/30', bg: 'bg-emerald-500', textColors: 'text-emerald-50', placeholder: 'Explain it simply...' }
+    }[agentId];
     
-    const signatureText = `\n\n========================================\nOFFICIAL SEAL OF THE JUDGE\nSigned,\nThe Chief Overseer`;
-    const fullContent = finalReport.includes("OFFICIAL SEAL") ? finalReport : finalReport + signatureText;
-    
-    const subject = encodeURIComponent(`[OFFICIAL VERDICT] ${presenterName} - Live Panel Defense Report`);
-    const body = encodeURIComponent(`Official AI Panel Evaluation for ${presenterName}'s presentation on "${presentationTopic || 'Data Analytics'}":\n\n${fullContent}\n\nAutomated by TTSP Neural Core.\nSent securely by: ${loginEmail}`);
-    window.open(`mailto:dionsondaniel@gmail.com,ehn@healthbio.online?subject=${subject}&body=${body}`, '_blank');
+    const Icon = config.icon;
+
+    return (
+      <motion.div 
+        key={agentId}
+        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+        className={`bg-slate-800/50 border ${config.border} rounded-2xl md:rounded-3xl p-5 md:p-6 shadow-lg relative overflow-hidden transition-all duration-500 ${isActive ? 'ring-1 ring-white/10' : 'opacity-60 grayscale-[30%]'}`}
+      >
+        <div className={`absolute top-0 left-0 w-2 h-full ${config.bg}`} />
+        <h3 className={`${config.color} font-black text-xs md:text-sm uppercase tracking-widest flex items-center gap-2 mb-3 md:mb-4`}>
+          <Icon className="w-4 h-4 md:w-5 md:h-5" /> {config.name} Asks:
+        </h3>
+        <p className="text-white text-sm md:text-lg font-medium mb-4 leading-relaxed">
+          "{generatedQuestions?.[agentId]}"
+        </p>
+        
+        {isActive ? (
+          <textarea 
+            value={answers[agentId]} 
+            onChange={e => setAnswers({...answers, [agentId]: e.target.value})} 
+            rows={3} 
+            className={`w-full bg-slate-900 border ${config.border} ${config.textColors} font-medium text-xs md:text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-white/50 transition-colors`} 
+            placeholder={config.placeholder} 
+            autoFocus
+          />
+        ) : (
+          <div className="w-full bg-slate-900/50 border border-slate-700/50 text-slate-300 text-xs md:text-sm rounded-xl px-4 py-3 italic">
+            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-widest block mb-1">Your Answer:</span>
+            {answers[agentId]}
+          </div>
+        )}
+      </motion.div>
+    );
   };
 
   const RobotAvatar = ({ agent, active, scale = 1 }: any) => (
@@ -517,45 +662,43 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
                 </motion.div>
               )}
 
-              {/* STAGE 2: Q&A */}
+              {/* STAGE 2: PROGRESSIVE Q&A */}
               {stage === 'qna' && generatedQuestions && (
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto space-y-6 md:space-y-8 py-4">
-                  <div className="bg-emerald-500/10 border border-emerald-500/30 p-3 md:p-4 rounded-xl flex items-center gap-3 text-emerald-400 mb-4 md:mb-8">
-                    <ShieldCheck className="w-5 h-5 md:w-6 md:h-6 shrink-0" />
-                    <p className="text-[10px] md:text-sm font-bold uppercase tracking-widest">Nexus Log: Security & Attendance Verified. Proceeding to Q&A.</p>
+                  <div className="bg-emerald-500/10 border border-emerald-500/30 p-3 md:p-4 rounded-xl flex items-center justify-between text-emerald-400 mb-4 md:mb-8">
+                    <div className="flex items-center gap-3">
+                      <ShieldCheck className="w-5 h-5 md:w-6 md:h-6 shrink-0" />
+                      <p className="text-[10px] md:text-sm font-bold uppercase tracking-widest">Nexus Log: Live Interrogation Active.</p>
+                    </div>
+                    <span className="text-[10px] font-mono tracking-widest bg-emerald-500/20 px-2 py-1 rounded">PANEL {currentQIndex + 1}/3</span>
                   </div>
 
-                  {/* EVE */}
-                  <div className="bg-slate-800/50 border border-cyan-500/30 rounded-2xl md:rounded-3xl p-5 md:p-6 shadow-[0_0_20px_rgba(34,211,238,0.05)] relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-2 h-full bg-cyan-500" />
-                    <h3 className="text-cyan-400 font-black text-xs md:text-sm uppercase tracking-widest flex items-center gap-2 mb-3 md:mb-4"><Terminal className="w-4 h-4 md:w-5 md:h-5" /> Techy Eve Asks:</h3>
-                    <p className="text-white text-sm md:text-lg font-medium mb-4 md:mb-6 leading-relaxed">"{generatedQuestions.eve}"</p>
-                    <textarea value={answers.eve} onChange={e => setAnswers({...answers, eve: e.target.value})} rows={3} className="w-full bg-slate-900 border border-cyan-500/30 text-cyan-50 font-mono text-xs md:text-sm rounded-xl px-4 py-3 focus:border-cyan-400 outline-none" placeholder={`Write your ${selectedModule} technical explanation here...`} />
+                  <div className="space-y-6">
+                    {/* Render up to the current question */}
+                    {qnaOrder.slice(0, currentQIndex + 1).map((agent, idx) => 
+                      renderQuestionBox(agent, idx === currentQIndex)
+                    )}
                   </div>
 
-                  {/* ZEUS */}
-                  <div className="bg-slate-800/50 border border-amber-500/30 rounded-2xl md:rounded-3xl p-5 md:p-6 shadow-[0_0_20px_rgba(251,191,36,0.05)] relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-2 h-full bg-amber-500" />
-                    <h3 className="text-amber-400 font-black text-xs md:text-sm uppercase tracking-widest flex items-center gap-2 mb-3 md:mb-4"><Briefcase className="w-4 h-4 md:w-5 md:h-5" /> CEO Zeus Asks:</h3>
-                    <p className="text-white text-sm md:text-lg font-medium mb-4 md:mb-6 leading-relaxed">"{generatedQuestions.zeus}"</p>
-                    <textarea value={answers.zeus} onChange={e => setAnswers({...answers, zeus: e.target.value})} rows={3} className="w-full bg-slate-900 border border-amber-500/30 text-amber-50 text-xs md:text-sm rounded-xl px-4 py-3 focus:border-amber-400 outline-none" placeholder="Write your executive business answer here..." />
+                  <div className="pt-6 border-t border-slate-800">
+                    <button 
+                      onClick={handleNextQuestion} 
+                      disabled={isProcessing || !answers[qnaOrder[currentQIndex]]?.trim()}
+                      className={`w-full py-4 md:py-5 font-black text-xs md:text-sm rounded-2xl uppercase tracking-widest transition-all flex items-center justify-center gap-3 shadow-xl ${
+                        currentQIndex < 2 
+                          ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20' 
+                          : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-500/20'
+                      } disabled:bg-slate-800 disabled:text-slate-500 disabled:shadow-none`}
+                    >
+                      {isProcessing ? (
+                        <><Loader2 className="w-5 h-5 md:w-6 md:h-6 animate-spin" /> The Judge is calculating scores...</>
+                      ) : currentQIndex < 2 ? (
+                        <>Submit Answer & Continue <ArrowRight className="w-4 h-4 md:w-5 md:h-5" /></>
+                      ) : (
+                        <><Gavel className="w-5 h-5 md:w-6 md:h-6" /> Face The Judge</>
+                      )}
+                    </button>
                   </div>
-
-                  {/* ALTO */}
-                  <div className="bg-slate-800/50 border border-emerald-500/30 rounded-2xl md:rounded-3xl p-5 md:p-6 shadow-[0_0_20px_rgba(52,211,153,0.05)] relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-2 h-full bg-emerald-500" />
-                    <h3 className="text-emerald-400 font-black text-xs md:text-sm uppercase tracking-widest flex items-center gap-2 mb-3 md:mb-4"><HelpCircle className="w-4 h-4 md:w-5 md:h-5" /> Alto Asks:</h3>
-                    <p className="text-white text-sm md:text-lg font-medium mb-4 md:mb-6 leading-relaxed">"{generatedQuestions.alto}"</p>
-                    <textarea value={answers.alto} onChange={e => setAnswers({...answers, alto: e.target.value})} rows={3} className="w-full bg-slate-900 border border-emerald-500/30 text-emerald-50 text-xs md:text-sm rounded-xl px-4 py-3 focus:border-emerald-400 outline-none" placeholder="Explain it simply..." />
-                  </div>
-
-                  <button 
-                    onClick={() => submitAnswersAndGrade(true)} 
-                    disabled={isProcessing || !answers.eve || !answers.zeus || !answers.alto}
-                    className="w-full py-4 md:py-5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-black text-xs md:text-sm rounded-2xl uppercase tracking-widest transition-colors flex items-center justify-center gap-3 shadow-xl shadow-indigo-500/20 mt-6 md:mt-8"
-                  >
-                    {isProcessing ? <><Loader2 className="w-5 h-5 md:w-6 md:h-6 animate-spin" /> The Judge is calculating scores...</> : <><Gavel className="w-5 h-5 md:w-6 md:h-6" /> Submit Defense to The Judge</>}
-                  </button>
                 </motion.div>
               )}
 
@@ -621,7 +764,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
                       <p className="text-rose-300/80 text-[10px] md:text-xs max-w-md mx-auto leading-relaxed">
                         {loggedInUser 
                           ? `Transmit official evaluation from ${loggedInUser} to dionsondaniel@gmail.com and ehn@healthbio.online via secure SMTP protocol.`
-                          : `Transmit official evaluation directly to dionsondaniel@gmail.com and ehn@healthbio.online via secure SMTP protocol. Authentication required.`
+                          : `Auto-generate a secure email draft containing the finalized PDF evaluation. Authentication required.`
                         }
                       </p>
                     </div>
@@ -631,16 +774,16 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
                         onClick={() => setShowLoginModal(true)}
                         className="px-6 py-4 w-full md:w-auto bg-rose-600 hover:bg-rose-500 text-white font-black text-xs md:text-sm rounded-xl md:rounded-2xl uppercase tracking-widest flex items-center justify-center gap-3 mx-auto shadow-lg shadow-rose-600/30 transition-all"
                       >
-                        <Lock className="w-4 h-4 md:w-5 md:h-5" /> Authenticate & Send Directly
+                        <Lock className="w-4 h-4 md:w-5 md:h-5" /> Authenticate & Generate Draft
                       </button>
                     ) : (
                       <div className="flex flex-col items-center gap-3">
                         {emailStatus === 'auth' && <p className="text-rose-400 flex items-center gap-2 font-bold uppercase tracking-widest text-xs"><Loader2 className="w-4 h-4 animate-spin" /> Authenticating {loggedInUser}...</p>}
-                        {emailStatus === 'sending' && <p className="text-indigo-400 flex items-center gap-2 font-bold uppercase tracking-widest text-xs"><Loader2 className="w-4 h-4 animate-spin" /> Transmitting via SMTP...</p>}
+                        {emailStatus === 'generating' && <p className="text-indigo-400 flex items-center gap-2 font-bold uppercase tracking-widest text-xs"><Loader2 className="w-4 h-4 animate-spin" /> Packaging EML Draft with Natively Embedded PDF...</p>}
                         {emailStatus === 'sent' && (
                           <div className="text-emerald-400 flex flex-col items-center gap-2">
-                            <p className="flex items-center gap-2 font-bold uppercase tracking-widest text-xs md:text-sm"><CheckCircle2 className="w-5 h-5" /> Transmission Successful</p>
-                            <p className="text-[10px] md:text-xs text-emerald-500/80">Report securely transmitted from <strong className="text-emerald-300">{loggedInUser}</strong> to dionsondaniel@gmail.com & ehn@healthbio.online.</p>
+                            <p className="flex items-center gap-2 font-bold uppercase tracking-widest text-xs md:text-sm"><CheckCircle2 className="w-5 h-5" /> Transmission Prepared</p>
+                            <p className="text-[10px] md:text-xs text-emerald-500/80 max-w-sm leading-relaxed">A specialized <strong>.eml</strong> file has been downloaded. Click it to open your default Mail app with the PDF automatically attached!</p>
                           </div>
                         )}
                       </div>
@@ -736,7 +879,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
                         <div className="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold shrink-0">2</div>
                         <div>
                           <h4 className="font-bold text-white mb-1">Live AI Interrogation</h4>
-                          <p className="text-slate-400 text-xs leading-relaxed">The AI Panel analyzes your document. <strong>Techy Eve</strong> asks a strictly technical/coding question based on your metrics. <strong>CEO Zeus</strong> challenges your business logic and ROI. <strong>Newbie Alto</strong> tests your ability to explain complex concepts simply. You must answer them live.</p>
+                          <p className="text-slate-400 text-xs leading-relaxed">The AI Panel analyzes your document. They will confront you <strong>one by one in a random order</strong>. You must satisfy each expert's inquiry before facing the next.</p>
                         </div>
                       </div>
 
@@ -744,7 +887,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
                         <div className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold shrink-0">3</div>
                         <div>
                           <h4 className="font-bold text-white mb-1">The Judge's Verdict</h4>
-                          <p className="text-slate-400 text-xs leading-relaxed">Once submitted, <strong>The Judge</strong> oversees the entire interaction. It grades your answers (0-100%) against your original document, evaluates the fairness of the panelists' questions, and generates an official Defense Summary Report.</p>
+                          <p className="text-slate-400 text-xs leading-relaxed">Once all three questions are answered, <strong>The Judge</strong> oversees the entire interaction. It grades your answers (0-100%) against your original document and generates an official Defense Summary Report.</p>
                         </div>
                       </div>
 
@@ -752,7 +895,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
                         <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold shrink-0">4</div>
                         <div>
                           <h4 className="font-bold text-white mb-1">Auto-Download & Transmission</h4>
-                          <p className="text-slate-400 text-xs leading-relaxed">Upon the verdict, a professional PDF Document (.pdf) containing your results is automatically downloaded. You can then authenticate using your secure credentials to transmit the final report via your default email client.</p>
+                          <p className="text-slate-400 text-xs leading-relaxed">Upon the verdict, a professional PDF Document (.pdf) containing your results is automatically downloaded. You can then authenticate to generate a high-converting email draft designed to intrigue the recipients.</p>
                         </div>
                       </div>
                     </div>
