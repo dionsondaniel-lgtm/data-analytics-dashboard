@@ -438,7 +438,7 @@ export const AILivePanelPractice: React.FC<AILivePanelPracticeProps> = ({ isOpen
 
                     <div>
                       <label className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                        <FileIcon className="w-3 h-3" /> Presentation File (Optional for Practice)
+                        <FileIcon className="w-3 h-3" /> Presentation File (PDF / TXT / Images)
                       </label>
                       <div className="border-2 border-dashed border-slate-700 bg-slate-900/50 rounded-2xl p-6 md:p-8 text-center hover:bg-slate-800 transition-colors relative cursor-pointer">
                         <input type="file" onChange={handleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".pdf,.txt,image/*" />
