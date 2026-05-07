@@ -3,7 +3,7 @@
 import React, { ReactNode, useEffect, useState } from 'react';
 import { SidebarTree } from './SidebarTree';
 import { ViewType } from '../types';
-import { ChevronLeft, ChevronRight, Filter, Layers, BookOpen, X, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Filter, Layers, BookOpen, X, Sparkles, LogOut } from 'lucide-react';
 import { clsx } from 'clsx';
 
 interface DashboardLayoutProps {
@@ -19,6 +19,7 @@ interface DashboardLayoutProps {
   subHeader?: ReactNode;
   onToggleAIAgent?: () => void;
   isAIAgentOpen?: boolean;
+  onLogout?: () => void; // <-- NEW: Logout prop
 }
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
@@ -33,7 +34,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   headerActions,
   subHeader,
   onToggleAIAgent,
-  isAIAgentOpen
+  isAIAgentOpen,
+  onLogout
 }) => {
   const [bgImage, setBgImage] = useState('https://t4.ftcdn.net/jpg/07/49/21/07/360_F_749210788_1LKxjjOHZPsJZwDOclb8D0Y5UsT20blt.jpg');
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768);
@@ -124,10 +126,25 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 {currentView} {selectedCohort ? `- Cohort ${selectedCohort}` : ''} {selectedModule ? `- ${selectedModule}` : ''}
               </h1>
             </div>
-            <div className="flex items-center space-x-4">
+            
+            {/* --- HEADER ACTIONS & LOGOUT --- */}
+            <div className="flex items-center space-x-2 sm:space-x-4">
               {headerActions}
-              <span className="text-sm text-gray-500 dark:text-gray-400 hidden sm:inline">Live Data Sync</span>
-              <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+              
+              <div className="flex items-center space-x-2 border-l border-gray-200 dark:border-gray-700 pl-3 sm:pl-4">
+                <span className="text-sm text-gray-500 dark:text-gray-400 hidden sm:inline">Live Data Sync</span>
+                <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+              </div>
+
+              {onLogout && (
+                <button
+                  onClick={onLogout}
+                  className="p-2 ml-1 text-gray-400 hover:text-rose-600 dark:text-gray-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-full transition-all duration-300 flex items-center justify-center group"
+                  title="Secure Logout"
+                >
+                  <LogOut className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
+                </button>
+              )}
             </div>
           </header>
           {subHeader}

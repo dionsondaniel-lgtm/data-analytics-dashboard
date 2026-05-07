@@ -1,13 +1,12 @@
-// src/components/AIAgents.tsx
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, MessageSquare, UserCheck, Mail, Gavel, 
-  Send, Sparkles, Loader2, Zap, ShieldCheck, Clock, CheckCircle2, AlertTriangle, ExternalLink, Users, PlaySquare, Menu
+  Send, Sparkles, Loader2, Zap, ShieldCheck, Clock, CheckCircle2, AlertTriangle, ExternalLink, Users, PlaySquare, Menu, Lock, Key
 } from 'lucide-react';
 import { OverallMetrics, Learner, TransformedAttendance, TransformedPractice, TransformedProject } from '../types';
 import { AILivePanel } from './AILivePanel';
+import { AILivePanelPractice } from './AILivePanelPractice';
 
 interface AIAgentsProps {
   isOpen: boolean;
@@ -21,7 +20,7 @@ interface AIAgentsProps {
 
 type AgentType = 'Aura' | 'Nexus' | 'Nova' | 'Judge';
 
-const AGENTS =[
+const AGENTS = [
   { id: 'Aura', name: 'Aura', role: 'Data Analyst', icon: MessageSquare, color: 'text-cyan-400', bg: 'bg-cyan-500/10', border: 'border-cyan-500/30' },
   { id: 'Nexus', name: 'Nexus', role: 'Attendance Monitor', icon: UserCheck, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30' },
   { id: 'Nova', name: 'Nova', role: 'Outreach & Email', icon: Mail, color: 'text-rose-400', bg: 'bg-rose-500/10', border: 'border-rose-500/30' },
@@ -29,18 +28,22 @@ const AGENTS =[
 ];
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const TARGET_DATE = new Date('2026-05-15T00:00:00').getTime();
 
 export const AIAgents: React.FC<AIAgentsProps> = ({ isOpen, onClose, metrics, learners, attendanceData, practiceData, projectData }) => {
   const [activeAgent, setActiveAgent] = useState<AgentType>('Aura');
   const [query, setQuery] = useState('');
   const [chatHistory, setChatHistory] = useState<{role: 'user'|'agent', text: string}[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const[agentOutput, setAgentOutput] = useState<string>('');
+  const [agentOutput, setAgentOutput] = useState<string>('');
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLivePanelOpen, setIsLivePanelOpen] = useState(false);
+  const [isPracticePanelOpen, setIsPracticePanelOpen] = useState(false);
+  const [showCountdownModal, setShowCountdownModal] = useState(false);
+  const [timeLeft, setTimeLeft] = useState({ d: 0, h: 0, m: 0, s: 0 });
 
-  const[novaTargetCohort, setNovaTargetCohort] = useState<string>('');
+  const [novaTargetCohort, setNovaTargetCohort] = useState<string>('');
   const [draftedEmails, setDraftedEmails] = useState<{name: string, email: string, module: string, subject: string, body: string}[]>([]);
 
   const [agentStats, setAgentStats] = useState<Record<string, { runs: number, totalTimeMs: number, errors: number }>>({
@@ -63,7 +66,7 @@ export const AIAgents: React.FC<AIAgentsProps> = ({ isOpen, onClose, metrics, le
     if (availableCohorts.length > 0 && !novaTargetCohort) {
       setNovaTargetCohort(availableCohorts[availableCohorts.length - 1]);
     }
-  },[availableCohorts, novaTargetCohort]);
+  }, [availableCohorts, novaTargetCohort]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -96,6 +99,46 @@ export const AIAgents: React.FC<AIAgentsProps> = ({ isOpen, onClose, metrics, le
     if (isOpen) fetchModels();
   }, [isOpen]);
 
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    if (showCountdownModal) {
+      interval = setInterval(() => {
+        const now = new Date().getTime();
+        const diff = TARGET_DATE - now;
+        if (diff <= 0) {
+          setTimeLeft({ d: 0, h: 0, m: 0, s: 0 });
+        } else {
+          setTimeLeft({
+            d: Math.floor(diff / (1000 * 60 * 60 * 24)),
+            h: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+            m: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+            s: Math.floor((diff % (1000 * 60)) / 1000)
+          });
+        }
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [showCountdownModal]);
+
+  const handleLaunchPanelClick = () => {
+    const now = new Date().getTime();
+    if (now >= TARGET_DATE) {
+      setIsLivePanelOpen(true);
+    } else {
+      setShowCountdownModal(true);
+    }
+  };
+
+  const handleAdminBypass = () => {
+    const pass = prompt("Enter Admin Override Passkey:");
+    if (pass === "Elite7") {
+      setShowCountdownModal(false);
+      setIsLivePanelOpen(true);
+    } else if (pass !== null) {
+      alert("Invalid Passkey. Access Denied.");
+    }
+  };
+
   const callAI = async (prompt: string, agentName: string): Promise<string> => {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey || apiKey === 'undefined') {
@@ -106,7 +149,7 @@ export const AIAgents: React.FC<AIAgentsProps> = ({ isOpen, onClose, metrics, le
     let success = false;
     let responseText = "";
 
-    const priorityModels =['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+    const priorityModels = ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-1.5-flash'];
     const modelChain = Array.from(new Set([activeModel, ...priorityModels, ...availableModels]));
 
     for (const model of modelChain) {
@@ -120,7 +163,7 @@ export const AIAgents: React.FC<AIAgentsProps> = ({ isOpen, onClose, metrics, le
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-              contents:[{ parts: [{ text: prompt }] }],
+              contents: [{ parts: [{ text: prompt }] }],
               generationConfig: { temperature: 0.1 }
             })
           });
@@ -183,7 +226,7 @@ export const AIAgents: React.FC<AIAgentsProps> = ({ isOpen, onClose, metrics, le
     
     const userQ = query;
     setQuery('');
-    setChatHistory(prev =>[...prev, { role: 'user', text: userQ }]);
+    setChatHistory(prev => [...prev, { role: 'user', text: userQ }]);
     setIsLoading(true);
 
     const compressedData = learners.map(l => {
@@ -222,7 +265,7 @@ export const AIAgents: React.FC<AIAgentsProps> = ({ isOpen, onClose, metrics, le
     - Be professional, concise, and act like a sentient data interface. DO NOT say "I don't have access".`;
 
     const response = await callAI(prompt, 'Aura');
-    setChatHistory(prev =>[...prev, { role: 'agent', text: response }]);
+    setChatHistory(prev => [...prev, { role: 'agent', text: response }]);
     setIsLoading(false);
   };
 
@@ -329,7 +372,7 @@ export const AIAgents: React.FC<AIAgentsProps> = ({ isOpen, onClose, metrics, le
   };
 
   const getRealLeaderboard = () => {
-    return['Aura', 'Nexus', 'Nova'].map(name => {
+    return ['Aura', 'Nexus', 'Nova'].map(name => {
       const s = agentStats[name];
       return {
         name,
@@ -354,7 +397,6 @@ export const AIAgents: React.FC<AIAgentsProps> = ({ isOpen, onClose, metrics, le
               className="w-full h-full md:max-w-7xl md:h-[95vh] bg-slate-900 md:border border-slate-700 md:shadow-[0_0_80px_rgba(99,102,241,0.15)] md:rounded-[2.5rem] overflow-hidden flex flex-col md:flex-row relative"
             >
               
-              {/* MOBILE HEADER OVERLAY */}
               <div className="md:hidden h-16 border-b border-slate-800 flex items-center justify-between px-4 bg-slate-950 z-30 shrink-0">
                 <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 text-slate-400 hover:text-white">
                   <Menu className="w-6 h-6" />
@@ -368,9 +410,7 @@ export const AIAgents: React.FC<AIAgentsProps> = ({ isOpen, onClose, metrics, le
                 </button>
               </div>
 
-              {/* COLLAPSIBLE SIDEBAR */}
               <div className={`absolute md:relative z-20 left-0 top-16 md:top-0 h-[calc(100%-4rem)] md:h-full w-72 bg-slate-950 border-r border-slate-800 p-6 flex flex-col shrink-0 transform transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-                
                 <div className="hidden md:flex items-center justify-between mb-8">
                   <div className="flex items-center gap-2">
                     <Sparkles className="text-indigo-400 w-6 h-6" />
@@ -401,10 +441,9 @@ export const AIAgents: React.FC<AIAgentsProps> = ({ isOpen, onClose, metrics, le
                   })}
                 </div>
                 
-                {/* LAUNCH LIVE PANEL BUTTON */}
                 <div className="pt-6 mt-4 border-t border-slate-800 flex flex-col gap-4">
                   <button 
-                    onClick={() => setIsLivePanelOpen(true)}
+                    onClick={handleLaunchPanelClick}
                     className="w-full py-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-black rounded-2xl uppercase tracking-widest flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(99,102,241,0.4)] transition-all hover:scale-[1.02]"
                   >
                     <PlaySquare className="w-5 h-5" /> Live Panel
@@ -419,7 +458,6 @@ export const AIAgents: React.FC<AIAgentsProps> = ({ isOpen, onClose, metrics, le
                 </div>
               </div>
 
-              {/* MAIN CONTENT AREA */}
               <div className="flex-1 flex flex-col bg-slate-900 relative overflow-hidden h-full">
                 <div className="hidden md:flex h-20 border-b border-slate-800 px-8 items-center justify-between bg-slate-900/50 backdrop-blur-md z-10 shrink-0">
                   {AGENTS.map(a => a.id === activeAgent && (
@@ -438,7 +476,6 @@ export const AIAgents: React.FC<AIAgentsProps> = ({ isOpen, onClose, metrics, le
 
                 <div className="flex-1 overflow-y-auto p-4 sm:p-8 scrollbar-elegant relative flex flex-col">
                   
-                  {/* --- AURA (Chat) --- */}
                   {activeAgent === 'Aura' && (
                     <div className="flex flex-col h-full">
                       <div className="flex-1 space-y-6 overflow-y-auto pb-4 pr-2 scrollbar-elegant">
@@ -480,7 +517,6 @@ export const AIAgents: React.FC<AIAgentsProps> = ({ isOpen, onClose, metrics, le
                     </div>
                   )}
 
-                  {/* --- NEXUS (Attendance) --- */}
                   {activeAgent === 'Nexus' && (
                     <div className="h-full flex flex-col">
                       {!agentOutput && !isLoading ? (
@@ -516,7 +552,6 @@ export const AIAgents: React.FC<AIAgentsProps> = ({ isOpen, onClose, metrics, le
                     </div>
                   )}
 
-                  {/* --- NOVA (Outreach) --- */}
                   {activeAgent === 'Nova' && (
                     <div className="h-full flex flex-col">
                       {!isLoading && draftedEmails.length === 0 && !agentOutput ? (
@@ -589,7 +624,6 @@ export const AIAgents: React.FC<AIAgentsProps> = ({ isOpen, onClose, metrics, le
                                   </a>
                                 </div>
                               ))}
-                              
                               <button onClick={() => {setAgentOutput(''); setDraftedEmails([]);}} className="w-full mt-4 py-3 text-xs md:text-sm text-slate-400 hover:text-white transition-colors uppercase tracking-widest font-bold">
                                 Reset Outreach Module
                               </button>
@@ -600,7 +634,6 @@ export const AIAgents: React.FC<AIAgentsProps> = ({ isOpen, onClose, metrics, le
                     </div>
                   )}
 
-                  {/* --- THE JUDGE (Real Leaderboard) --- */}
                   {activeAgent === 'Judge' && (
                     <div className="h-full flex flex-col overflow-y-auto scrollbar-elegant pr-1 md:pr-2">
                       <div className="bg-slate-950 border border-amber-500/30 rounded-3xl p-4 md:p-8 shadow-[0_0_30px_rgba(245,158,11,0.1)] mb-6 shrink-0">
@@ -665,12 +698,78 @@ export const AIAgents: React.FC<AIAgentsProps> = ({ isOpen, onClose, metrics, le
         )}
       </AnimatePresence>
       
-      {/* RENDER THE NEW LIVE PANEL */}
-      <AILivePanel 
-        isOpen={isLivePanelOpen} 
-        onClose={() => setIsLivePanelOpen(false)} 
-        learners={learners} 
-      />
+      <AILivePanel isOpen={isLivePanelOpen} onClose={() => setIsLivePanelOpen(false)} learners={learners} />
+      <AILivePanelPractice isOpen={isPracticePanelOpen} onClose={() => setIsPracticePanelOpen(false)} learners={learners} />
+
+      <AnimatePresence>
+        {showCountdownModal && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[300] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              className="bg-slate-900 border border-indigo-500/30 p-8 md:p-12 rounded-3xl shadow-[0_0_50px_rgba(99,102,241,0.2)] w-full max-w-xl relative text-center"
+            >
+              
+              {/* ADMIN BYPASS ICON */}
+              <button 
+                onClick={handleAdminBypass}
+                className="absolute top-6 left-6 text-slate-700 hover:text-amber-400 transition-colors group"
+                title="Admin Override"
+              >
+                <motion.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}>
+                  <Key className="w-5 h-5 opacity-50 group-hover:opacity-100" />
+                </motion.div>
+              </button>
+
+              <button onClick={() => setShowCountdownModal(false)} className="absolute top-6 right-6 text-slate-500 hover:text-white transition-colors"><X className="w-6 h-6"/></button>
+              
+              <div className="w-20 h-20 bg-indigo-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-indigo-500/30 shadow-[0_0_30px_rgba(99,102,241,0.3)]">
+                <Lock className="w-10 h-10 text-indigo-400" />
+              </div>
+
+              <h2 className="text-2xl md:text-3xl font-black text-white uppercase tracking-widest mb-2">Access Restricted</h2>
+              <p className="text-slate-400 text-sm mb-8 leading-relaxed max-w-md mx-auto">
+                The Official Live Defense Panel is currently locked by the Chief Overseer. Neural pathways will open on <strong className="text-indigo-400">May 15, 2026</strong>.
+              </p>
+
+              <div className="grid grid-cols-4 gap-2 md:gap-4 mb-10">
+                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4">
+                  <p className="text-2xl md:text-3xl font-mono font-bold text-white">{timeLeft.d}</p>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-1 font-bold">Days</p>
+                </div>
+                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4">
+                  <p className="text-2xl md:text-3xl font-mono font-bold text-white">{timeLeft.h}</p>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-1 font-bold">Hours</p>
+                </div>
+                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4">
+                  <p className="text-2xl md:text-3xl font-mono font-bold text-white">{timeLeft.m}</p>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-1 font-bold">Mins</p>
+                </div>
+                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4">
+                  <p className="text-2xl md:text-3xl font-mono font-bold text-emerald-400">{timeLeft.s}</p>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-1 font-bold">Secs</p>
+                </div>
+              </div>
+
+              <div className="pt-8 border-t border-slate-800">
+                <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mb-4">Want to prepare early?</p>
+                <button 
+                  onClick={() => {
+                    setShowCountdownModal(false);
+                    setIsPracticePanelOpen(true);
+                  }}
+                  className="w-full py-4 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/50 text-emerald-400 font-black rounded-xl uppercase tracking-widest transition-all hover:scale-105"
+                >
+                  Enter Practice Mode
+                </button>
+              </div>
+
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };

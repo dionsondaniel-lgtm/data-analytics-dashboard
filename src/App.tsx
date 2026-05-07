@@ -1,6 +1,7 @@
 // src/App.tsx
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion'; // <-- NEW: Imported framer-motion
 import { DashboardLayout } from './components/DashboardLayout';
 import { MetricsOverview } from './components/MetricsOverview';
 import { RechartsViews } from './components/RechartsViews';
@@ -22,6 +23,7 @@ import { About } from './components/About';
 import Projecters from './components/Projecters';
 import { TimeMarquee } from './components/TimeMarquee';
 import { AIAgents } from './components/AIAgents';
+import LandingPage from './components/LandingPage';
 import { fetchSheetData, getStoredGIDs } from './services/GoogleSheetService';
 import { transformAttendance, transformPractice, transformProjects, calculateOverallMetrics } from './services/DataTransformer';
 import { AppState, ViewType, TransformedAttendance, TransformedPractice, TransformedProject, Learner, AlumniProject, AllCohortsPhoto, CohortImage } from './types';
@@ -43,6 +45,21 @@ export const getHDImageUrl = (url: string): string => {
 };
 
 export default function App() {
+  const [isAuthorized, setIsAuthorized] = useState<boolean>(
+    localStorage.getItem('dashboard_authorized') === 'true'
+  );
+
+  const handleAccessGranted = () => {
+    setIsAuthorized(true);
+    localStorage.setItem('dashboard_authorized', 'true');
+  };
+
+  // <-- NEW: Added handleLogout logic -->
+  const handleLogout = () => {
+    localStorage.removeItem('dashboard_authorized');
+    setIsAuthorized(false);
+  };
+
   const [state, setState] = useState<AppState>({
     selectedCohort: null,
     selectedModule: null,
@@ -313,53 +330,78 @@ export default function App() {
 
   const subHeader = state.currentView === 'Portal' ? <TimeMarquee /> : undefined;
 
+
+  // <-- NEW: AnimatePresence Wrapper around the whole layout -->
   return (
-    <div id="dashboard-content">
-      <DashboardLayout
-        currentView={state.currentView}
-        selectedCohort={state.selectedCohort}
-        selectedModule={state.selectedModule}
-        onSelectView={handleSelectView}
-        onSelectCohort={(c) => setState(s => ({ ...s, selectedCohort: c }))}
-        onSelectModule={(m) => setState(s => ({ ...s, selectedModule: m }))}
-        availableCohorts={availableCohorts}
-        onToggleAIAgent={() => setIsAIAgentsOpen(!isAIAgentsOpen)}
-        isAIAgentOpen={isAIAgentsOpen}
-        headerActions={(
-          <div className="flex items-center space-x-2">
-            <button onClick={() => setIsAutoReportOpen(true)} className="flex items-center px-3 py-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-100 transition-colors">
-              <PlayCircle className="w-4 h-4 mr-1.5" /> Auto Report
-            </button>
-            
-            <button 
-              onClick={toggleTheme}
-              className="p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-indigo-600 dark:text-indigo-400"
-              title={currentTheme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+    <AnimatePresence mode="wait">
+      {!isAuthorized ? (
+        <motion.div 
+          key="landing-page" 
+          exit={{ opacity: 0, scale: 1.05, filter: 'blur(5px)' }} 
+          transition={{ duration: 0.4 }}
+          className="w-full min-h-screen"
+        >
+          <LandingPage onAccessGranted={handleAccessGranted} />
+        </motion.div>
+      ) : (
+        <motion.div
+          key="dashboard-app"
+          initial={{ opacity: 0, scale: 0.98, filter: 'blur(5px)' }}
+          animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+          exit={{ opacity: 0, scale: 0.95, y: 20, filter: 'blur(10px)' }}
+          transition={{ duration: 0.5, ease: 'easeInOut' }}
+          className="w-full h-screen"
+        >
+          <div id="dashboard-content" className="h-full w-full">
+            <DashboardLayout
+              currentView={state.currentView}
+              selectedCohort={state.selectedCohort}
+              selectedModule={state.selectedModule}
+              onSelectView={handleSelectView}
+              onSelectCohort={(c) => setState(s => ({ ...s, selectedCohort: c }))}
+              onSelectModule={(m) => setState(s => ({ ...s, selectedModule: m }))}
+              availableCohorts={availableCohorts}
+              onToggleAIAgent={() => setIsAIAgentsOpen(!isAIAgentsOpen)}
+              isAIAgentOpen={isAIAgentsOpen}
+              onLogout={handleLogout} // Passed the logout logic to the layout
+              headerActions={(
+                <div className="flex items-center space-x-2">
+                  <button onClick={() => setIsAutoReportOpen(true)} className="flex items-center px-3 py-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-100 transition-colors">
+                    <PlayCircle className="w-4 h-4 mr-1.5" /> Auto Report
+                  </button>
+                  
+                  <button 
+                    onClick={toggleTheme}
+                    className="p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-indigo-600 dark:text-indigo-400"
+                    title={currentTheme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                  >
+                    {currentTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+                  </button>
+
+                  <button onClick={handleDownloadPDF} disabled={isExporting} className="p-2 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-full shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all">
+                    {isExporting ? <Loader2 className="w-4 h-4 animate-spin text-indigo-600" /> : <Download className="w-4 h-4 text-indigo-600" />}
+                  </button>
+                </div>
+              )}
+              subHeader={subHeader}
             >
-              {currentTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
+              {renderContent()}
+            </DashboardLayout>
 
-            <button onClick={handleDownloadPDF} disabled={isExporting} className="p-2 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-full shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all">
-              {isExporting ? <Loader2 className="w-4 h-4 animate-spin text-indigo-600" /> : <Download className="w-4 h-4 text-indigo-600" />}
-            </button>
+            <AutoReport isOpen={isAutoReportOpen} onClose={() => setIsAutoReportOpen(false)} metrics={metrics} filters={{ cohort: state.selectedCohort, module: state.selectedModule }} />
+            
+            <AIAgents 
+              isOpen={isAIAgentsOpen} 
+              onClose={() => setIsAIAgentsOpen(false)}
+              metrics={metrics}
+              learners={filteredLearners}
+              attendanceData={filteredAtt} 
+              practiceData={filteredPrac} 
+              projectData={filteredProj} 
+            />
           </div>
-        )}
-        subHeader={subHeader}
-      >
-        {renderContent()}
-      </DashboardLayout>
-
-      <AutoReport isOpen={isAutoReportOpen} onClose={() => setIsAutoReportOpen(false)} metrics={metrics} filters={{ cohort: state.selectedCohort, module: state.selectedModule }} />
-      
-      <AIAgents 
-        isOpen={isAIAgentsOpen} 
-        onClose={() => setIsAIAgentsOpen(false)}
-        metrics={metrics}
-        learners={filteredLearners} // Contains Cohorts, Names
-        attendanceData={filteredAtt} // Contains Attendance logs
-        practiceData={filteredPrac} // Contains Practice logs
-        projectData={filteredProj} // INJECTED HERE: Contains GPAs required by Aura to calc Top Performers
-      />
-    </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

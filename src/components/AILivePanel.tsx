@@ -1,5 +1,3 @@
-// src/components/AILivePanel.tsx
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -14,57 +12,55 @@ interface AILivePanelProps {
   learners: Learner[];
 }
 
-const PANELISTS =[
+const PANELISTS = [
   { id: 'Eve', name: 'Techy Eve', role: 'Lead Technical Architect', icon: Terminal, color: 'text-cyan-400', glow: 'shadow-[0_0_30px_rgba(34,211,238,0.4)]', bg: 'bg-cyan-950/50', border: 'border-cyan-500/50' },
   { id: 'Zeus', name: 'CEO Zeus', role: 'Chief Executive Officer', icon: Briefcase, color: 'text-amber-400', glow: 'shadow-[0_0_30px_rgba(251,191,36,0.4)]', bg: 'bg-amber-950/50', border: 'border-amber-500/50' },
-  { id: 'Alto', name: 'Newbie Alto', role: 'Business Associate', icon: HelpCircle, color: 'text-emerald-400', glow: 'shadow-[0_0_30px_rgba(52,211,153,0.4)]', bg: 'bg-emerald-950/50', border: 'border-emerald-500/50' }
+  { id: 'Alto', name: 'Newbie Alto', role: 'Business Associate', icon: HelpCircle, color: 'text-emerald-400', glow: 'shadow-[0_0_30px_rgba(52,211,153,0.4)]', bg: 'bg-emerald-950/50', border: 'border-emerald-500/50' },
+  { id: 'Leo', name: 'Data Leo', role: 'Senior Data Scientist', icon: BarChart3, color: 'text-purple-400', glow: 'shadow-[0_0_30px_rgba(168,85,247,0.4)]', bg: 'bg-purple-950/50', border: 'border-purple-500/50' },
+  { id: 'Max', name: 'QA Max', role: 'Compliance & QA Lead', icon: ShieldCheck, color: 'text-rose-400', glow: 'shadow-[0_0_30px_rgba(244,63,94,0.4)]', bg: 'bg-rose-950/50', border: 'border-rose-500/50' }
 ];
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-const MODULE_OPTIONS =[
+const MODULE_OPTIONS = [
   { id: 'SQL', label: 'SQL Architecture', icon: Database },
   { id: 'Excel', label: 'Advanced Excel', icon: Table },
   { id: 'PowerBI', label: 'Power BI Dashboarding', icon: BarChart3 },
   { id: 'Python', label: 'Python Analytics', icon: Code2 },
 ];
 
-type AgentId = 'eve' | 'zeus' | 'alto';
+type AgentId = 'eve' | 'zeus' | 'alto' | 'leo' | 'max';
+type Difficulty = 'Easy' | 'Intermediate' | 'Hard';
 
 export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learners }) => {
   const [stage, setStage] = useState<'intro' | 'upload' | 'qna' | 'grading'>('intro');
-  const[isProcessing, setIsProcessing] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [activeSpeaker, setActiveSpeaker] = useState<string | null>('Aura');
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   
-  // Dynamic AI Models State
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [activeModel, setActiveModel] = useState<string>('gemini-3-flash-preview');
 
-  // Presentation Data
   const [presenterName, setPresenterName] = useState('');
   const [presentationTopic, setPresentationTopic] = useState('');
   const [selectedModule, setSelectedModule] = useState('SQL');
+  const [difficulty, setDifficulty] = useState<Difficulty>('Easy');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const[fileBase64, setFileBase64] = useState<{ data: string, mimeType: string } | null>(null);
+  const [fileBase64, setFileBase64] = useState<{ data: string, mimeType: string } | null>(null);
 
-  // Q&A Data (Interactive Sequence)
-  const [generatedQuestions, setGeneratedQuestions] = useState<{eve: string, zeus: string, alto: string} | null>(null);
-  const [answers, setAnswers] = useState({ eve: '', zeus: '', alto: '' });
+  const [generatedQuestions, setGeneratedQuestions] = useState<Record<AgentId, string> | null>(null);
+  const [answers, setAnswers] = useState<Record<AgentId, string>>({ eve: '', zeus: '', alto: '', leo: '', max: '' });
   const [qnaOrder, setQnaOrder] = useState<AgentId[]>([]);
   const [currentQIndex, setCurrentQIndex] = useState(0);
   
-  // Grading Data
   const [finalReport, setFinalReport] = useState<string>('');
   
-  // Email Auth Data
   const [emailStatus, setEmailStatus] = useState<'idle' | 'auth' | 'generating' | 'sent'>('idle');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-  const[loggedInUser, setLoggedInUser] = useState('');
+  const [loggedInUser, setLoggedInUser] = useState('');
 
-  // Fetch API Models on mount
   useEffect(() => {
     const fetchModels = async () => {
       const apiKey = process.env.GEMINI_API_KEY;
@@ -85,7 +81,6 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     if (isOpen) fetchModels();
   }, [isOpen]);
 
-  // Reset on open
   useEffect(() => {
     if (isOpen) {
       setStage('intro');
@@ -93,10 +88,11 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
       setPresenterName('');
       setPresentationTopic('');
       setSelectedModule('SQL');
+      setDifficulty('Easy');
       setUploadedFile(null);
       setFileBase64(null);
       setGeneratedQuestions(null);
-      setAnswers({ eve: '', zeus: '', alto: '' });
+      setAnswers({ eve: '', zeus: '', alto: '', leo: '', max: '' });
       setQnaOrder([]);
       setCurrentQIndex(0);
       setFinalReport('');
@@ -122,7 +118,6 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     }
   };
 
-  // --- ROBUST AI ENGINE CALLER ---
   const callAI = async (prompt: string, speakerId: string, includeFile: boolean = false): Promise<string> => {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return "⚠️ API Key missing.";
@@ -131,15 +126,13 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     let responseText = "";
 
     const parts: any[] = [{ text: prompt }];
-    const validMimeTypes =['application/pdf', 'text/plain', 'text/csv', 'image/jpeg', 'image/png', 'image/webp'];
+    const validMimeTypes = ['application/pdf', 'text/plain', 'text/csv', 'image/jpeg', 'image/png', 'image/webp'];
     
     if (includeFile && fileBase64 && validMimeTypes.includes(fileBase64.mimeType)) {
-      parts.push({
-        inlineData: { data: fileBase64.data, mimeType: fileBase64.mimeType }
-      });
+      parts.push({ inlineData: { data: fileBase64.data, mimeType: fileBase64.mimeType } });
     }
 
-    const priorityModels =['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+    const priorityModels = ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-1.5-flash'];
     const modelChain = Array.from(new Set([activeModel, ...priorityModels, ...availableModels]));
 
     for (const model of modelChain) {
@@ -151,16 +144,12 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
           const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              contents:[{ parts }], 
-              generationConfig: { temperature: 0.3 } 
-            })
+            body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: 0.3 } })
           });
           
           if (!res.ok) {
             if (res.status === 429) break; 
             if (res.status === 503 && attempt === 0) { await delay(1500); attempt++; continue; } 
-            if (res.status >= 400) break; 
             break;
           }
 
@@ -179,29 +168,32 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     return responseText || "⚠️ Neural failure. Unable to compute.";
   };
 
-  // --- STAGE 1: PROCESS PRESENTATION & SHUFFLE PANELISTS ---
   const processPresentation = async () => {
     if (!presenterName || (!presentationTopic && !uploadedFile)) return;
     setIsProcessing(true);
     
     setActiveSpeaker('Nexus');
     await delay(1500); 
-
     setActiveSpeaker('System');
-    const prompt = `You are generating 3 distinct questions for a live ${selectedModule} presentation defense.
+
+    const diffGuide = 
+      difficulty === 'Easy' ? "Keep questions very simple, basic, and encouraging. Avoid complex queries." :
+      difficulty === 'Intermediate' ? "Ask standard, thought-provoking questions that require a good understanding of the topic." :
+      "Be ruthless, highly technical, and critical. Ask complex edge-cases and pinpoint theoretical flaws.";
+
+    const prompt = `You are generating 5 distinct questions for a live ${selectedModule} presentation defense.
     Presenter: ${presenterName}
+    Difficulty Mode: ${difficulty.toUpperCase()}. ${diffGuide}
     Abstract/Summary Provided: ${presentationTopic || 'Refer entirely to the attached document.'}
     
-    INSTRUCTIONS:
-    Read the attached document carefully. 
-    IMPORTANT "EASY MODE": Keep the questions VERY EASY, beginner-friendly, and simple to answer live. Avoid overly complex, tricky, or highly advanced technical queries.
+    Act as these 5 characters and write ONE specific question each:
+    1. Techy Eve: Asks about the specific coding/tool usage of ${selectedModule}.
+    2. CEO Zeus: Asks about the ROI, main business goal, or executive-level metric.
+    3. Alto: Asks a friendly, non-technical summarizing question (e.g. favorite part, biggest lesson).
+    4. Data Leo: Asks about the analytical methodology, data cleaning, or statistical approach.
+    5. QA Max: Asks about data security, validation, edge cases, or potential errors.
     
-    Act as these 3 characters and write ONE specific, easy-to-answer question each:
-    1. Techy Eve: A simple, basic-level technical question asking how they used ${selectedModule} (e.g., a basic function, tool, or general process they applied).
-    2. CEO Zeus: A straightforward, easy business question about the general outcome, main goal, or a basic metric mentioned.
-    3. Nontechnical Alto: A very friendly, simple question asking them to summarize their main takeaway or share their favorite part of the project.
-    
-    Return EXACTLY a raw JSON object with keys "eve", "zeus", and "alto". Do not use markdown wrappers.`;
+    Return EXACTLY a raw JSON object with keys "eve", "zeus", "alto", "leo", and "max". Do not use markdown wrappers.`;
 
     const response = await callAI(prompt, 'Panel', true); 
     
@@ -212,20 +204,23 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
       
       const parsed = JSON.parse(match[0]);
       setGeneratedQuestions({
-        eve: parsed.eve || `Can you briefly explain how you used ${selectedModule} to get these results?`,
-        zeus: parsed.zeus || "What would you say is the biggest business benefit or main goal of your project?",
-        alto: parsed.alto || "If you had to summarize your presentation in one simple sentence, what would it be?"
+        eve: parsed.eve || `How did you use ${selectedModule} technically here?`,
+        zeus: parsed.zeus || "What is the main business benefit?",
+        alto: parsed.alto || "What was the easiest part to understand?",
+        leo: parsed.leo || "How did you ensure your data was clean and accurate?",
+        max: parsed.max || "What steps did you take to validate this data to prevent errors?"
       });
     } catch (e) {
       setGeneratedQuestions({
-        eve: `Can you briefly explain how you used ${selectedModule} to get these results?`,
-        zeus: `What would you say is the biggest business benefit or main goal of your project?`,
-        alto: `If you had to summarize your presentation in one simple sentence, what would it be?`
+        eve: `How did you use ${selectedModule} technically here?`,
+        zeus: `What is the main business benefit?`,
+        alto: `What was the easiest part to understand?`,
+        leo: `How did you ensure your data was clean and accurate?`,
+        max: `What steps did you take to validate this data to prevent errors?`
       });
     }
 
-    // Randomize Panelist Order to create suspense
-    const agents: AgentId[] = ['eve', 'zeus', 'alto'];
+    const agents: AgentId[] = ['eve', 'zeus', 'alto', 'leo', 'max'];
     const shuffled = [...agents].sort(() => Math.random() - 0.5);
     
     setQnaOrder(shuffled);
@@ -237,12 +232,11 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     setActiveSpeaker(firstAgent.charAt(0).toUpperCase() + firstAgent.slice(1));
   };
 
-  // --- PROGRESSIVE Q&A HANDLER ---
   const handleNextQuestion = () => {
     const activeAgent = qnaOrder[currentQIndex];
     if (!answers[activeAgent]) return;
 
-    if (currentQIndex < 2) {
+    if (currentQIndex < 4) {
       const nextIndex = currentQIndex + 1;
       setCurrentQIndex(nextIndex);
       const nextAgent = qnaOrder[nextIndex];
@@ -252,40 +246,33 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     }
   };
 
-  // --- STAGE 2: GRADE ---
   const submitAnswersAndGrade = async (useFile: boolean = true) => {
     setIsProcessing(true);
     setActiveSpeaker('System');
 
     const currentDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-    const prompt = `You are evaluating a live ${selectedModule} data presentation defense.
+    const prompt = `You are evaluating a live ${selectedModule} data presentation defense (${difficulty} Mode).
     Date: ${currentDate}
     Presenter: ${presenterName}
     Topic Summary: ${presentationTopic || 'Based entirely on the transcript.'}
     
     TRANSCRIPT OF DEFENSE:
-    - Techy Eve's Q: ${generatedQuestions?.eve}
-      Presenter's Answer: ${answers.eve}
-
-    - CEO Zeus's Q: ${generatedQuestions?.zeus}
-      Presenter's Answer: ${answers.zeus}
-
-    - Alto's Q: ${generatedQuestions?.alto}
-      Presenter's Answer: ${answers.alto}
+    Eve's Q: ${generatedQuestions?.eve} | A: ${answers.eve}
+    Zeus's Q: ${generatedQuestions?.zeus} | A: ${answers.zeus}
+    Alto's Q: ${generatedQuestions?.alto} | A: ${answers.alto}
+    Leo's Q: ${generatedQuestions?.leo} | A: ${answers.leo}
+    Max's Q: ${generatedQuestions?.max} | A: ${answers.max}
     
     INSTRUCTIONS:
-    1. Evaluate answers based on Technical Accuracy, Business Value, and Clarity. Note that this was evaluated in "Easy Mode", so grade generously if they answered reasonably well.
-    2. Grade the presenter (0-100%).
-    3. Act as "The Judge" (Chief Overseer). Provide a final average score and a detailed verdict referencing specific metrics.
-    4. Evaluate the Panelists: Who asked the best question? Who was too harsh?
+    1. Grade the presenter out of 100%. Adjust strictness based on ${difficulty} mode.
+    2. Provide a detailed verdict referencing specific metrics and answers.
+    3. Evaluate the Panelists: Who asked the best question? Who was too harsh?
     
     Format output as a professional Defense Summary Report. Do NOT use bold markdown. Do NOT include a signature block at the end (the system appends the official seal).`;
 
     let report = await callAI(prompt, 'Judge', useFile);
-    
     if (useFile && report.includes('⚠️')) {
-      console.warn("Retrying Judge without heavy file context...");
       report = await callAI(prompt, 'Judge', false);
     }
 
@@ -299,7 +286,6 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     }
   };
 
-  // --- HELPER: GENERATE PDF AS BASE64 FOR EMAIL ATTACHMENT ---
   const generatePDFBase64 = async (reportContent: string): Promise<string> => {
     const { default: jsPDF } = await import('jspdf');
     const doc = new jsPDF();
@@ -347,7 +333,6 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     return dataUri.split(',')[1];
   };
 
-  // --- EXPORT HANDLERS ---
   const handleDownload = (format: string, reportContent: string = finalReport) => {
     if (!reportContent || reportContent.includes('⚠️')) return;
     
@@ -414,7 +399,6 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     }
   };
 
-  // --- ADVANCED SECURE AUTH & EML DRAFT GENERATOR ---
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginEmail || !loginPassword) return;
@@ -426,9 +410,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     await delay(1500); 
     setEmailStatus('generating');
     
-    // Generate Base64 PDF directly in memory
     const pdfBase64 = await generatePDFBase64(finalReport);
-    
     const boundary = "----=_Part_Nova_System_Boundary";
     const subject = `[CONFIDENTIAL VERDICT] Final Defense Assessment - ${presenterName}`;
     const to = "dionsondaniel@gmail.com, ehn@healthbio.online";
@@ -445,7 +427,6 @@ Please find the official PDF dossier attached to reveal the final score and comp
 Automated by TTSP Neural Core.
 Securely routed by: ${loginEmail}`;
 
-    // Construct raw EML Multipart string (Forces email client to open with Native Attachment)
     const emlContent = `To: ${to}
 Subject: ${subject}
 X-Unsent: 1
@@ -475,12 +456,13 @@ ${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
     setEmailStatus('sent');
   };
 
-  // --- UI RENDER HELPERS ---
   const renderQuestionBox = (agentId: AgentId, isActive: boolean) => {
     const config = {
-      eve: { name: 'Techy Eve', icon: Terminal, color: 'text-cyan-400', border: 'border-cyan-500/30', bg: 'bg-cyan-500', textColors: 'text-cyan-50', placeholder: 'Write your technical explanation here...' },
-      zeus: { name: 'CEO Zeus', icon: Briefcase, color: 'text-amber-400', border: 'border-amber-500/30', bg: 'bg-amber-500', textColors: 'text-amber-50', placeholder: 'Write your executive business answer here...' },
-      alto: { name: 'Alto', icon: HelpCircle, color: 'text-emerald-400', border: 'border-emerald-500/30', bg: 'bg-emerald-500', textColors: 'text-emerald-50', placeholder: 'Explain it simply...' }
+      eve: { name: 'Techy Eve', icon: Terminal, color: 'text-cyan-400', border: 'border-cyan-500/30', bg: 'bg-cyan-500', textColors: 'text-cyan-50', placeholder: 'Technical explanation...' },
+      zeus: { name: 'CEO Zeus', icon: Briefcase, color: 'text-amber-400', border: 'border-amber-500/30', bg: 'bg-amber-500', textColors: 'text-amber-50', placeholder: 'Business answer...' },
+      alto: { name: 'Alto', icon: HelpCircle, color: 'text-emerald-400', border: 'border-emerald-500/30', bg: 'bg-emerald-500', textColors: 'text-emerald-50', placeholder: 'Simple summary...' },
+      leo: { name: 'Data Leo', icon: BarChart3, color: 'text-purple-400', border: 'border-purple-500/30', bg: 'bg-purple-500', textColors: 'text-purple-50', placeholder: 'Analytical methodology...' },
+      max: { name: 'QA Max', icon: ShieldCheck, color: 'text-rose-400', border: 'border-rose-500/30', bg: 'bg-rose-500', textColors: 'text-rose-50', placeholder: 'Validation steps...' }
     }[agentId];
     
     const Icon = config.icon;
@@ -520,17 +502,16 @@ ${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
 
   const RobotAvatar = ({ agent, active, scale = 1 }: any) => (
     <motion.div 
-      animate={{ y: active ?[-5, 5, -5] : 0, scale: active ? scale * 1.1 : scale }}
+      animate={{ y: active ? [-5, 5, -5] : 0, scale: active ? scale * 1.1 : scale }}
       transition={{ repeat: active ? Infinity : 0, duration: 3, ease: "easeInOut" }}
       className={`flex flex-col items-center ${active ? '' : 'opacity-40 grayscale'} transition-all duration-500`}
     >
-      <div className={`w-16 h-16 md:w-28 md:h-28 rounded-full flex items-center justify-center border-4 ${agent.border} ${agent.bg} ${active ? agent.glow : ''} relative`}>
+      <div className={`w-12 h-12 md:w-16 md:h-16 rounded-full flex items-center justify-center border-2 md:border-4 ${agent.border} ${agent.bg} ${active ? agent.glow : ''} relative`}>
         {active && <div className="absolute inset-0 rounded-full animate-ping opacity-20 border-2 border-white" />}
-        <agent.icon className={`w-8 h-8 md:w-14 md:h-14 ${agent.color}`} />
+        <agent.icon className={`w-6 h-6 md:w-8 md:h-8 ${agent.color}`} />
       </div>
-      <div className="mt-4 text-center bg-slate-900/80 px-2 py-1 rounded-lg border border-slate-700">
-        <h4 className={`font-black text-[10px] md:text-sm uppercase tracking-widest ${agent.color}`}>{agent.name}</h4>
-        <p className="text-[8px] md:text-[9px] text-slate-400 uppercase hidden md:block">{agent.role}</p>
+      <div className="mt-2 text-center bg-slate-900/80 px-2 py-1 rounded-lg border border-slate-700 hidden sm:block">
+        <h4 className={`font-black text-[8px] md:text-[10px] uppercase tracking-widest ${agent.color}`}>{agent.name}</h4>
       </div>
     </motion.div>
   );
@@ -564,12 +545,14 @@ ${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
 
           <div className="flex-1 overflow-y-auto flex flex-col md:flex-row relative">
             
-            {/* 3D PANELISTS DISPLAY */}
-            <div className="w-full md:w-1/3 bg-slate-950/50 border-b md:border-b-0 md:border-r border-slate-800 p-4 md:p-6 flex flex-row md:flex-col justify-around md:justify-center items-center gap-2 md:gap-12 relative overflow-hidden shrink-0 z-10">
+            {/* 5 PANELISTS DISPLAY */}
+            <div className="w-full md:w-[120px] lg:w-[160px] bg-slate-950/50 border-b md:border-b-0 md:border-r border-slate-800 p-4 flex flex-row md:flex-col justify-around items-center gap-2 relative overflow-hidden shrink-0 z-10">
               <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-indigo-500/5 via-transparent to-rose-500/5 pointer-events-none" />
               <RobotAvatar agent={PANELISTS[0]} active={activeSpeaker === 'Eve' || stage === 'intro'} />
-              <RobotAvatar agent={PANELISTS[1]} active={activeSpeaker === 'Zeus' || stage === 'intro'} scale={1.1} />
+              <RobotAvatar agent={PANELISTS[1]} active={activeSpeaker === 'Zeus' || stage === 'intro'} />
               <RobotAvatar agent={PANELISTS[2]} active={activeSpeaker === 'Alto' || stage === 'intro'} />
+              <RobotAvatar agent={PANELISTS[3]} active={activeSpeaker === 'Leo' || stage === 'intro'} />
+              <RobotAvatar agent={PANELISTS[4]} active={activeSpeaker === 'Max' || stage === 'intro'} />
             </div>
 
             {/* INTERACTIVE STAGE AREA */}
@@ -585,10 +568,7 @@ ${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
                   
                   <div className="bg-slate-800/50 border border-slate-700 p-6 rounded-3xl text-slate-300 text-sm md:text-base leading-relaxed mb-8 shadow-inner w-full">
                     <p className="font-bold text-indigo-400 mb-3 uppercase tracking-widest text-[10px] md:text-xs">Aura's Guidelines:</p>
-                    "Welcome to the Live Panel. You will present your data findings. 
-                    <strong className="text-cyan-400"> Techy Eve</strong> will test your coding skills. 
-                    <strong className="text-amber-400"> CEO Zeus</strong> will test your business logic. 
-                    <strong className="text-emerald-400"> Alto</strong> will test your clarity. 
+                    "Welcome to the Live Panel. You will face <strong>5 expert panelists</strong>. 
                     Upload your materials, answer their queries, and face <strong className="text-rose-400">The Judge</strong>."
                   </div>
 
@@ -612,6 +592,29 @@ ${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
                   </div>
 
                   <div className="space-y-5 md:space-y-6">
+                    
+                    {/* DIFFICULTY SELECTOR */}
+                    <div>
+                      <label className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Difficulty Mode</label>
+                      <div className="grid grid-cols-3 gap-2 md:gap-4">
+                        {(['Easy', 'Intermediate', 'Hard'] as Difficulty[]).map(lvl => (
+                          <button
+                            key={lvl}
+                            onClick={() => setDifficulty(lvl)}
+                            className={`py-3 md:py-4 rounded-xl border font-bold text-xs md:text-sm uppercase tracking-widest transition-all ${
+                              difficulty === lvl 
+                                ? lvl === 'Easy' ? 'bg-emerald-600/20 border-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
+                                  : lvl === 'Intermediate' ? 'bg-amber-600/20 border-amber-500 text-white shadow-lg shadow-amber-500/20'
+                                  : 'bg-rose-600/20 border-rose-500 text-white shadow-lg shadow-rose-500/20'
+                                : 'bg-slate-800/50 border-slate-700 text-slate-500 hover:bg-slate-800'
+                            }`}
+                          >
+                            {lvl}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     <div>
                       <label className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Primary Module Focus</label>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-4">
@@ -641,7 +644,6 @@ ${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
                         <input type="file" onChange={handleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".pdf,.txt,image/*" />
                         <UploadCloud className="w-8 h-8 md:w-12 md:h-12 text-slate-500 mx-auto mb-3 md:mb-4" />
                         <p className="text-slate-300 font-bold text-sm md:text-base">{uploadedFile ? uploadedFile.name : "Drag & Drop or Click to Browse"}</p>
-                        <p className="text-slate-500 text-[10px] md:text-xs mt-2">The AI Neural Core will visually scan and read your document.</p>
                       </div>
                     </div>
 
@@ -649,7 +651,7 @@ ${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
                       <label className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                         <FileText className="w-3 h-3" /> Executive Summary / Key Focus Areas
                       </label>
-                      <textarea value={presentationTopic} onChange={e => setPresentationTopic(e.target.value)} rows={3} className="w-full bg-slate-900 border border-slate-700 text-white text-sm md:text-base rounded-xl px-4 py-3 focus:border-indigo-500 outline-none resize-none placeholder-slate-600" placeholder="Specify your main goals, revenue trends, or key metrics here. What is the core message of your presentation? (e.g., 'Revenue increased 18% QoQ driven by enterprise sales.')" />
+                      <textarea value={presentationTopic} onChange={e => setPresentationTopic(e.target.value)} rows={3} className="w-full bg-slate-900 border border-slate-700 text-white text-sm md:text-base rounded-xl px-4 py-3 focus:border-indigo-500 outline-none resize-none placeholder-slate-600" placeholder="Specify your main goals, revenue trends, or key metrics here." />
                     </div>
 
                     <button 
@@ -669,13 +671,12 @@ ${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
                   <div className="bg-emerald-500/10 border border-emerald-500/30 p-3 md:p-4 rounded-xl flex items-center justify-between text-emerald-400 mb-4 md:mb-8">
                     <div className="flex items-center gap-3">
                       <ShieldCheck className="w-5 h-5 md:w-6 md:h-6 shrink-0" />
-                      <p className="text-[10px] md:text-sm font-bold uppercase tracking-widest">Nexus Log: Live Interrogation Active.</p>
+                      <p className="text-[10px] md:text-sm font-bold uppercase tracking-widest">Nexus Log: {difficulty} Mode Interrogation Active.</p>
                     </div>
-                    <span className="text-[10px] font-mono tracking-widest bg-emerald-500/20 px-2 py-1 rounded">PANEL {currentQIndex + 1}/3</span>
+                    <span className="text-[10px] font-mono tracking-widest bg-emerald-500/20 px-2 py-1 rounded">PANEL {currentQIndex + 1}/5</span>
                   </div>
 
                   <div className="space-y-6">
-                    {/* Render up to the current question */}
                     {qnaOrder.slice(0, currentQIndex + 1).map((agent, idx) => 
                       renderQuestionBox(agent, idx === currentQIndex)
                     )}
@@ -686,14 +687,14 @@ ${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
                       onClick={handleNextQuestion} 
                       disabled={isProcessing || !answers[qnaOrder[currentQIndex]]?.trim()}
                       className={`w-full py-4 md:py-5 font-black text-xs md:text-sm rounded-2xl uppercase tracking-widest transition-all flex items-center justify-center gap-3 shadow-xl ${
-                        currentQIndex < 2 
+                        currentQIndex < 4 
                           ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20' 
                           : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-500/20'
                       } disabled:bg-slate-800 disabled:text-slate-500 disabled:shadow-none`}
                     >
                       {isProcessing ? (
                         <><Loader2 className="w-5 h-5 md:w-6 md:h-6 animate-spin" /> The Judge is calculating scores...</>
-                      ) : currentQIndex < 2 ? (
+                      ) : currentQIndex < 4 ? (
                         <>Submit Answer & Continue <ArrowRight className="w-4 h-4 md:w-5 md:h-5" /></>
                       ) : (
                         <><Gavel className="w-5 h-5 md:w-6 md:h-6" /> Face The Judge</>
@@ -731,7 +732,6 @@ ${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
                       {finalReport}
                     </div>
                     
-                    {/* ELEGANT SIGNATURE FOOTER */}
                     <div className="mt-6 pt-6 border-t border-slate-700/50 flex flex-col items-center md:items-end text-center md:text-right">
                       <div className="mb-4 relative">
                         <div className="w-16 h-16 md:w-20 md:h-20 rounded-full border border-amber-500/20 flex items-center justify-center bg-amber-500/5 shadow-[0_0_20px_rgba(251,191,36,0.1)]">
@@ -872,7 +872,7 @@ ${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
                         <div className="w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold shrink-0">1</div>
                         <div>
                           <h4 className="font-bold text-white mb-1">Initialization & Upload</h4>
-                          <p className="text-slate-400 text-xs leading-relaxed">Enter your name, select your primary module focus (SQL, Excel, Power BI, Python), upload your presentation file, and provide a brief executive summary. This context feeds directly into the AI's neural network.</p>
+                          <p className="text-slate-400 text-xs leading-relaxed">Enter your name, select difficulty, upload your presentation file, and provide a brief executive summary. This context feeds directly into the AI's neural network.</p>
                         </div>
                       </div>
 
@@ -880,7 +880,7 @@ ${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
                         <div className="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold shrink-0">2</div>
                         <div>
                           <h4 className="font-bold text-white mb-1">Live AI Interrogation</h4>
-                          <p className="text-slate-400 text-xs leading-relaxed">The AI Panel analyzes your document. They will confront you <strong>one by one in a random order</strong>. You must satisfy each expert's inquiry before facing the next.</p>
+                          <p className="text-slate-400 text-xs leading-relaxed">The AI Panel analyzes your document. 5 experts will confront you <strong>one by one in a random order</strong>. You must satisfy each expert's inquiry before facing the next.</p>
                         </div>
                       </div>
 
@@ -888,7 +888,7 @@ ${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
                         <div className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold shrink-0">3</div>
                         <div>
                           <h4 className="font-bold text-white mb-1">The Judge's Verdict</h4>
-                          <p className="text-slate-400 text-xs leading-relaxed">Once all three questions are answered, <strong>The Judge</strong> oversees the entire interaction. It grades your answers (0-100%) against your original document and generates an official Defense Summary Report.</p>
+                          <p className="text-slate-400 text-xs leading-relaxed">Once all five questions are answered, <strong>The Judge</strong> oversees the entire interaction. It grades your answers (0-100%) against your original document and generates an official Defense Summary Report.</p>
                         </div>
                       </div>
 
