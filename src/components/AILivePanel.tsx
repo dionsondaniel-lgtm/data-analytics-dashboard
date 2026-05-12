@@ -2,7 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, UploadCloud, File as FileIcon, Play, Terminal, Briefcase, HelpCircle, 
-  Gavel, Mail, Sparkles, Loader2, Download, Table, BarChart3, Code2, Database, ShieldCheck, Lock, CheckCircle2, UserCircle, Info, FileText, RefreshCw, ArrowRight, Award, Users, Clock, Timer, AlertTriangle
+  Gavel, Mail, Sparkles, Loader2, Download, Table, BarChart3, Code2, Database, 
+  ShieldCheck, Lock, CheckCircle2, UserCircle, Info, FileText, RefreshCw, 
+  ArrowRight, Award, Users, Clock, Timer, AlertTriangle, Volume2, VolumeX
 } from 'lucide-react';
 import { Learner } from '../types';
 import { LiveBadgesArena } from './LiveBadgesArena';
@@ -23,7 +25,7 @@ const PANELISTS = [
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-const MODULE_OPTIONS = [
+const MODULE_OPTIONS =[
   { id: 'SQL', label: 'SQL Architecture', icon: Database },
   { id: 'Excel', label: 'Advanced Excel', icon: Table },
   { id: 'PowerBI', label: 'Power BI Dashboarding', icon: BarChart3 },
@@ -42,6 +44,10 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
   const [showBadgesArena, setShowBadgesArena] = useState(false);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [activeModel, setActiveModel] = useState<string>('gemini-3-flash-preview');
+
+  // AUDIO & INTRO SEQUENCE STATES
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [introSequence, setIntroSequence] = useState(0);
 
   // TEAM / MEMBER STATES
   const [teamName, setTeamName] = useState('');
@@ -104,6 +110,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     if (isOpen) {
       setStage('intro');
       setActiveSpeaker('Aura');
+      setIntroSequence(0);
       setTeamName('');
       setSelectedPresenters([]);
       setSelectedMembers([]);
@@ -126,8 +133,69 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
       setQnaTimeLeft(10 * 60);
       setIsQnaActive(false);
       setIsTimedOut(false);
+    } else {
+      window.speechSynthesis?.cancel();
     }
   }, [isOpen]);
+
+  // Handle Intro Sequence Timing - ONLY RUN WHEN OPEN
+  useEffect(() => {
+    if (!isOpen) return;
+    if (stage === 'intro' && introSequence === 0) {
+      const timer = setTimeout(() => setIntroSequence(1), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [stage, introSequence, isOpen]);
+
+  // Handle Aura's Speech - ONLY RUN WHEN OPEN
+  useEffect(() => {
+    if (!isOpen || stage !== 'intro') {
+       window.speechSynthesis?.cancel();
+       return;
+    }
+
+    let timeoutId: NodeJS.Timeout;
+    
+    const playStep = (text: string, nextStep: number, delayMs: number) => {
+       if (!soundEnabled || !('speechSynthesis' in window)) {
+           timeoutId = setTimeout(() => setIntroSequence(nextStep), delayMs);
+           return;
+       }
+       window.speechSynthesis.cancel();
+       const utterance = new SpeechSynthesisUtterance(text);
+       utterance.rate = 1.0;
+       utterance.pitch = 1.2; 
+       
+       const voices = window.speechSynthesis.getVoices();
+       const femaleVoice = voices.find(v => v.name.includes('Female') || v.name.includes('Samantha') || v.name.includes('Google UK English Female') || v.name.includes('Zira'));
+       if (femaleVoice) utterance.voice = femaleVoice;
+
+       utterance.onend = () => {
+           setIntroSequence(nextStep);
+       };
+       // Backup fallback in case onend doesn't fire
+       timeoutId = setTimeout(() => {
+           setIntroSequence(prev => prev < nextStep ? nextStep : prev);
+       }, delayMs + 3000); 
+
+       window.speechSynthesis.speak(utterance);
+    }
+
+    if (introSequence === 1) {
+        playStep("Welcome to the Live Defense. Please follow the sequence carefully.", 2, 3000);
+    } else if (introSequence === 2) {
+        playStep("Step 1. Team Setup. Select your members and presenters from the cohort.", 3, 3500);
+    } else if (introSequence === 3) {
+        playStep("Step 2. Present. You will have a strict fifteen minute timer for your pitch.", 4, 4000);
+    } else if (introSequence === 4) {
+        playStep("Step 3. A I Defense. Upload your P D F and face the five Panelists.", 5, 4000);
+    } else if (introSequence === 5) {
+        playStep("Finally, introducing Gemma! After your grueling defense, Gemma will host the Live Badges Arena. The audience can vote for awards before The Judge delivers the final verdict.", 6, 9000);
+    }
+
+    return () => clearTimeout(timeoutId);
+  }, [introSequence, stage, soundEnabled, isOpen]);
+
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -387,7 +455,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
   // PARSER: Extracts clean text and the Rubric Array
   const parseRubric = (report: string) => {
     let cleanText = report;
-    const rubricData: any[] = [];
+    const rubricData: any[] =[];
     let finalScore = 0;
     
     if (report.includes('[RUBRIC]') && report.includes('[END RUBRIC]')) {
@@ -620,7 +688,6 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
       const blob = new Blob([htmlContent], { type: mime });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${filename}.${format}`; a.click();
     } else if (format === 'pdf') {
-      // Auto-downloads via the base64 gen to reuse code
       generatePDFBase64(reportContent).then(b64 => {
         const byteCharacters = atob(b64);
         const byteNumbers = new Array(byteCharacters.length);
@@ -753,6 +820,12 @@ ${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
 
   const { cleanText, rubricData, finalScore } = parseRubric(finalReport);
 
+  const stepsData =[
+    { step: "1. Team Setup", desc: "Select members & presenters.", icon: Users, color: "text-blue-400" },
+    { step: "2. Present (15m)", desc: "Strict timer for your pitch.", icon: Clock, color: "text-emerald-400" },
+    { step: "3. AI Defense (10m)", desc: "Upload PDF & Face 5 Panelists.", icon: ShieldCheck, color: "text-rose-400" }
+  ];
+
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[200] flex items-center justify-center p-2 sm:p-6 bg-slate-950/95 backdrop-blur-2xl">
@@ -786,7 +859,7 @@ ${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => setShowBadgesArena(true)}
+                onClick={() => { window.speechSynthesis?.cancel(); setShowBadgesArena(true); }}
                 className="relative group flex items-center gap-2 px-4 md:px-6 py-2 bg-slate-900 border border-slate-700 hover:border-pink-500/50 rounded-full overflow-hidden transition-all shadow-[0_0_20px_rgba(244,114,182,0.1)] hover:shadow-[0_0_30px_rgba(244,114,182,0.3)] z-10"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-indigo-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -798,9 +871,12 @@ ${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
               </motion.button>
             </div>
 
-            <div className="flex-1 flex justify-end">
+            <div className="flex-1 flex justify-end gap-2 md:gap-3">
+              <button onClick={() => setSoundEnabled(!soundEnabled)} className="p-2 md:p-3 bg-slate-800 hover:bg-indigo-500 hover:text-white rounded-full text-slate-400 transition-colors shrink-0">
+                {soundEnabled ? <Volume2 className="w-4 h-4 md:w-5 md:h-5" /> : <VolumeX className="w-4 h-4 md:w-5 md:h-5" />}
+              </button>
               <button onClick={onClose} className="p-2 md:p-3 bg-slate-800 hover:bg-rose-500 hover:text-white rounded-full text-slate-400 transition-colors shrink-0">
-                <X className="w-5 h-5 md:w-6 h-6" />
+                <X className="w-4 h-4 md:w-5 md:h-5" />
               </button>
             </div>
           </div>
@@ -823,27 +899,40 @@ ${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
               {/* STAGE 0: INTRO */}
               {stage === 'intro' && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-4xl mx-auto w-full text-center">
-                  <div className="w-24 h-24 bg-indigo-500/10 rounded-3xl flex items-center justify-center mb-6 mx-auto border border-indigo-500/30 transform rotate-12 shadow-[0_0_50px_rgba(99,102,241,0.2)]">
+                  <motion.div 
+                    initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2 }}
+                    className="w-24 h-24 bg-indigo-500/10 rounded-3xl flex items-center justify-center mb-6 mx-auto border border-indigo-500/30 transform rotate-12 shadow-[0_0_50px_rgba(99,102,241,0.2)]"
+                  >
                     <Sparkles className="w-12 h-12 text-indigo-400" />
-                  </div>
+                  </motion.div>
                   <h2 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tighter mb-4">Aura's Guidelines</h2>
                   <p className="text-slate-400 font-medium max-w-2xl mx-auto mb-12">Welcome to the Live Defense. Follow the sequence below.</p>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 text-left">
-                    {[
-                      { step: "1. Team Setup", desc: "Select members & presenters.", icon: Users, color: "text-blue-400" },
-                      { step: "2. Present (15m)", desc: "Strict timer for your pitch.", icon: Clock, color: "text-emerald-400" },
-                      { step: "3. AI Defense (10m)", desc: "Upload PDF & Face 5 Panelists.", icon: ShieldCheck, color: "text-rose-400" }
-                    ].map((item, i) => (
-                      <motion.div key={item.step} initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: i * 0.15 }} className="bg-slate-800/80 p-6 rounded-3xl border border-slate-700 shadow-xl">
-                        <item.icon className={`w-10 h-10 mb-4 ${item.color}`} />
-                        <p className="text-white font-black text-lg uppercase tracking-widest mb-2">{item.step}</p>
-                        <p className="text-slate-400 text-sm">{item.desc}</p>
-                      </motion.div>
-                    ))}
+                    {stepsData.map((item, i) => {
+                      const isActive = introSequence >= i + 2; 
+                      return (
+                        <motion.div 
+                          key={item.step} 
+                          initial={{ y: 50, opacity: 0 }} 
+                          animate={{ y: isActive ? 0 : 50, opacity: isActive ? 1 : 0 }} 
+                          transition={{ duration: 0.5 }} 
+                          className={`bg-slate-800/80 p-6 rounded-3xl border transition-all duration-500 ${isActive ? 'border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.3)]' : 'border-slate-700 shadow-xl'}`}
+                        >
+                          <item.icon className={`w-10 h-10 mb-4 ${item.color}`} />
+                          <p className="text-white font-black text-lg uppercase tracking-widest mb-2">{item.step}</p>
+                          <p className="text-slate-400 text-sm">{item.desc}</p>
+                        </motion.div>
+                      );
+                    })}
                   </div>
 
-                  <div className="bg-gradient-to-r from-pink-900/40 to-purple-900/40 border border-pink-500/30 p-8 rounded-3xl mb-12 flex flex-col md:flex-row items-center gap-8 shadow-2xl relative w-full text-left overflow-hidden">
+                  <motion.div 
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: introSequence >= 5 ? 1 : 0.9, opacity: introSequence >= 5 ? 1 : 0 }}
+                    transition={{ duration: 0.6 }}
+                    className="bg-gradient-to-r from-pink-900/40 to-purple-900/40 border border-pink-500/30 p-8 rounded-3xl mb-12 flex flex-col md:flex-row items-center gap-8 shadow-2xl relative w-full text-left overflow-hidden"
+                  >
                     <div className="w-32 h-32 md:w-48 md:h-48 rounded-2xl overflow-hidden border-4 border-pink-500/50 shrink-0 bg-slate-950 flex items-center justify-center relative shadow-[0_0_30px_rgba(244,114,182,0.4)]">
                       <img src="/gemma-badges.gif" alt="Gemma Badges" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
                     </div>
@@ -854,11 +943,30 @@ ${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
                       <p className="text-pink-200/80 text-sm md:text-base leading-relaxed mb-4">
                         After your grueling defense, <strong>Gemma</strong> will host the Live Badges Arena! The audience can vote for awards like <span className="text-yellow-400 font-bold">Query Master</span> before The Judge delivers the final verdict.
                       </p>
-                      <button onClick={() => setStage('upload')} className="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl uppercase tracking-widest transition-transform hover:scale-105 shadow-xl shadow-indigo-500/20 text-sm flex items-center gap-2">
-                        Enter the Arena <ArrowRight className="w-4 h-4" />
-                      </button>
+                      
+                      <AnimatePresence>
+                        {introSequence >= 6 && (
+                           <motion.button 
+                             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                             onClick={() => { window.speechSynthesis?.cancel(); setStage('upload'); }} 
+                             className="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl uppercase tracking-widest transition-transform hover:scale-105 shadow-xl shadow-indigo-500/20 text-sm flex items-center gap-2 mt-4"
+                           >
+                             Enter the Arena <ArrowRight className="w-4 h-4" />
+                           </motion.button>
+                        )}
+                      </AnimatePresence>
                     </div>
-                  </div>
+                  </motion.div>
+
+                  {/* Skip Intro Fallback Button */}
+                  {introSequence < 6 && (
+                     <button 
+                       onClick={() => { window.speechSynthesis?.cancel(); setIntroSequence(6); }} 
+                       className="text-slate-500 hover:text-white underline text-xs uppercase tracking-widest font-bold mt-4 transition-colors"
+                     >
+                       Skip Aura's Intro
+                     </button>
+                  )}
                 </motion.div>
               )}
 

@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@supabase/supabase-js';
 import { 
   Trophy, Award, Sparkles, Star, Users, ChevronLeft, Loader2, 
   BarChart3, Terminal, Code2, ShieldCheck, Zap, UploadCloud, X, 
   CheckCircle2, Briefcase, HelpCircle, Gavel, Trash2, Mic, Volume2, 
-  VolumeX, Download, Calendar, Activity, Edit3, UserCircle, FileText, 
-  Info, PartyPopper, Crown
+  VolumeX, Download, Calendar, Activity, Edit3, UserCircle, 
+  Info, Crown, Radio, PartyPopper 
 } from 'lucide-react';
 
 const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL || '';
@@ -38,7 +38,7 @@ const AI_AGENTS =['Techy Eve', 'CEO Zeus', 'Alto', 'Data Leo', 'QA Max', 'The Ju
 export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => {
   const [stage, setStage] = useState<'upload' | 'processing' | 'results'>('upload');
   const [dbTeams, setDbTeams] = useState<Team[]>([]);
-  const[results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<any[]>([]);
   const [recentFeed, setRecentFeed] = useState<any[]>([]);
   const [teamRankings, setTeamRankings] = useState<any[]>([]);
 
@@ -47,19 +47,26 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
 
   // Modals
   const [showGuide, setShowGuide] = useState(false);
-  const[showVoteModal, setShowVoteModal] = useState(false);
+  const [showVoteModal, setShowVoteModal] = useState(false);
   const [showGrandResults, setShowGrandResults] = useState(false);
 
   // Voting States
   const [voteAlias, setVoteAlias] = useState('');
   const [voteTeamId, setVoteTeamId] = useState('');
-  const[voteBadge, setVoteBadge] = useState('');
+  const [voteBadge, setVoteBadge] = useState('');
   const [isSubmittingVote, setIsSubmittingVote] = useState(false);
   const [voteSuccess, setVoteSuccess] = useState(false);
-  const[userPastVotes, setUserPastVotes] = useState<any[]>([]);
+  const [userPastVotes, setUserPastVotes] = useState<any[]>([]);
 
   // Gemma Audio State
-  const[soundEnabled, setSoundEnabled] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+
+  // Helper: Get start of today (Local Timezone)
+  const getStartOfToday = () => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.toISOString();
+  };
 
   // Time Formatter
   const timeAgo = (dateStr: string) => {
@@ -91,7 +98,7 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
     if (savedAlias) setVoteAlias(savedAlias);
 
     setTimeout(() => {
-      speak("Welcome to the Live Badges Arena. Restricted access mode active. Awaiting Ms. Ehn to upload the official verdicts.");
+      speak("Welcome to today's Live Badges Arena. Restricted access mode active. Awaiting Ms. Ehn to upload the official verdicts.");
     }, 1000);
 
     window.speechSynthesis.getVoices();
@@ -122,7 +129,12 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
 
   const fetchUserPastVotes = async (alias: string) => {
     if (!supabaseUrl) return;
-    const { data } = await supabase.from('badge_votes').select('id, badge_name, team_id').eq('voter_alias', alias);
+    const { data } = await supabase
+      .from('badge_votes')
+      .select('id, badge_name, team_id')
+      .eq('voter_alias', alias)
+      .gte('created_at', getStartOfToday()); // STRICTLY TODAY
+    
     if (data) setUserPastVotes(data);
   };
 
@@ -130,7 +142,13 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
     if (!supabaseUrl) return; 
 
     try {
-      const { data: voteData } = await supabase.from('badge_votes').select('team_id, badge_name, voter_alias, created_at').order('created_at', { ascending: false });
+      // FETCH STRICTLY TODAY'S VOTES
+      const { data: voteData } = await supabase
+        .from('badge_votes')
+        .select('team_id, badge_name, voter_alias, created_at')
+        .gte('created_at', getStartOfToday())
+        .order('created_at', { ascending: false });
+        
       const { data: teamData } = await supabase.from('teams').select('id, team_name');
 
       if (!voteData || !teamData) return;
@@ -216,7 +234,7 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
           }
         }
 
-        // AI Agents Cast Pre-Votes
+        // AI Agents Cast Pre-Votes automatically for today
         if (teamInfo) {
           const agentVotes = AI_AGENTS.map(agent => ({
             voter_alias: agent,
@@ -273,6 +291,7 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
     }
   };
 
+  // NATIVE jsPDF Export to bypass html2canvas oklch crash
   const exportGrandResultsPDF = async () => {
     try {
       const { default: jsPDF } = await import('jspdf');
@@ -375,44 +394,36 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
   };
 
   const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const maxRankVotes = teamRankings.length > 0 ? teamRankings[0].votes : 1;
 
-  // 3D Balloon Component
+  // 3D Balloon & Confetti Component
   const CelebrationBalloons = () => {
-    const colors =[
-      'from-pink-500 to-rose-600', 
-      'from-yellow-400 to-orange-500', 
-      'from-indigo-500 to-purple-600', 
-      'from-emerald-400 to-teal-500',
-      'from-cyan-400 to-blue-600'
-    ];
+    const colors =['from-pink-500 to-rose-600', 'from-yellow-400 to-orange-500', 'from-indigo-500 to-purple-600', 'from-emerald-400 to-teal-500', 'from-cyan-400 to-blue-600'];
+    const confettiColors = ['bg-pink-500', 'bg-yellow-400', 'bg-indigo-500', 'bg-emerald-400', 'bg-white'];
+    
     return (
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-[600]">
-        {Array.from({ length: 40 }).map((_, i) => (
+        {/* Confetti */}
+        {Array.from({ length: 60 }).map((_, i) => (
           <motion.div
-            key={i}
-            initial={{ 
-              y: '120vh', 
-              x: Math.random() * (window.innerWidth - 100), 
-              scale: Math.random() * 0.6 + 0.6, 
-              opacity: 1,
-              rotate: Math.random() * 40 - 20 
-            }}
-            animate={{ 
-              y: '-20vh', 
-              x: `+=${Math.random() * 100 - 50}`, 
-              opacity: 0 
-            }}
-            transition={{ 
-              duration: Math.random() * 4 + 4, 
-              ease: 'easeOut', 
-              delay: Math.random() * 1.5 
-            }}
+            key={`confetti-${i}`}
+            initial={{ y: '-10vh', x: Math.random() * window.innerWidth, rotate: Math.random() * 360, opacity: 1 }}
+            animate={{ y: '110vh', rotate: Math.random() * 720, x: `+=${Math.random() * 100 - 50}`, opacity: 0 }}
+            transition={{ duration: Math.random() * 3 + 2, ease: 'linear', repeat: Infinity, delay: Math.random() * 2 }}
+            className={`absolute w-2 h-4 ${confettiColors[i % confettiColors.length]} rounded-sm shadow-[0_0_10px_rgba(255,255,255,0.5)]`}
+          />
+        ))}
+        {/* Balloons */}
+        {Array.from({ length: 30 }).map((_, i) => (
+          <motion.div
+            key={`balloon-${i}`}
+            initial={{ y: '120vh', x: Math.random() * (window.innerWidth - 100), scale: Math.random() * 0.6 + 0.6, opacity: 1, rotate: Math.random() * 40 - 20 }}
+            animate={{ y: '-20vh', x: `+=${Math.random() * 100 - 50}`, opacity: 0 }}
+            transition={{ duration: Math.random() * 4 + 4, ease: 'easeOut', delay: Math.random() * 1.5 }}
             className={`absolute w-16 h-20 bg-gradient-to-tr ${colors[i % colors.length]} shadow-[inset_-5px_-5px_15px_rgba(0,0,0,0.4),inset_5px_5px_15px_rgba(255,255,255,0.4),0_10px_20px_rgba(0,0,0,0.5)]`}
             style={{ borderRadius: '50% 50% 50% 50% / 40% 40% 60% 60%' }}
           >
-            {/* Balloon knot */}
             <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-3 h-3 bg-inherit" style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }} />
-            {/* Balloon string */}
             <div className="absolute -bottom-16 left-1/2 w-[1px] h-16 bg-white/30" />
           </motion.div>
         ))}
@@ -438,18 +449,15 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
           </button>
           
           <div className="flex items-center gap-4 md:gap-6">
-            <button onClick={() => setShowGuide(true)} className="text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest bg-indigo-500/10 px-3 py-1.5 rounded-full border border-indigo-500/30">
+            <button onClick={() => setShowGuide(true)} className="text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest bg-indigo-500/10 px-3 py-1.5 rounded-full border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
               <Info className="w-4 h-4" /> Guide
             </button>
             <button onClick={() => setSoundEnabled(!soundEnabled)} className="text-pink-400 hover:text-pink-300 transition-colors">
               {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
             </button>
-            <div className="flex items-center gap-3">
-              <span className="flex h-3 w-3 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-pink-500"></span>
-              </span>
-              <h1 className="text-xs md:text-sm font-black text-white uppercase tracking-widest hidden sm:block">Gemma's Arena</h1>
+            <div className="flex items-center gap-3 bg-rose-500/10 border border-rose-500/30 px-3 py-1.5 rounded-full">
+              <Radio className="w-4 h-4 text-rose-500 animate-pulse" />
+              <h1 className="text-[10px] md:text-xs font-black text-rose-400 uppercase tracking-widest">Live Broadcast</h1>
             </div>
           </div>
         </div>
@@ -465,7 +473,7 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
                 initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
                 className="bg-[#121620] border border-white/10 p-8 rounded-[2rem] shadow-2xl w-full max-w-2xl relative"
               >
-                <button onClick={() => setShowGuide(true)} className="absolute top-6 right-6 text-slate-500 hover:text-white"><X className="w-6 h-6"/></button>
+                <button onClick={() => setShowGuide(false)} className="absolute top-6 right-6 text-slate-500 hover:text-white"><X className="w-6 h-6"/></button>
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-12 h-12 bg-indigo-500/10 rounded-xl flex items-center justify-center border border-indigo-500/30">
                     <HelpCircle className="w-6 h-6 text-indigo-400" />
@@ -474,32 +482,32 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
                 </div>
                 
                 <div className="space-y-4">
-                  <div className="bg-white/5 border border-white/5 p-4 rounded-2xl flex items-start gap-4">
+                  <div className="bg-white/5 border border-white/5 p-4 rounded-2xl flex items-start gap-4 hover:bg-white/10 transition-colors">
                     <span className="w-8 h-8 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center font-black shrink-0">1</span>
                     <div>
                       <h4 className="text-white font-bold uppercase tracking-widest mb-1 text-sm">Verdict Upload (Ms. Ehn Only)</h4>
                       <p className="text-xs text-slate-400 leading-relaxed">Ms. Ehn uploads the officially exported PDF Defense Reports. The AI parses the filenames to establish the participating teams.</p>
                     </div>
                   </div>
-                  <div className="bg-white/5 border border-white/5 p-4 rounded-2xl flex items-start gap-4">
+                  <div className="bg-white/5 border border-white/5 p-4 rounded-2xl flex items-start gap-4 hover:bg-white/10 transition-colors">
                     <span className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center font-black shrink-0">2</span>
                     <div>
                       <h4 className="text-white font-bold uppercase tracking-widest mb-1 text-sm">AI Agent Pre-Voting</h4>
-                      <p className="text-xs text-slate-400 leading-relaxed">Gemma processes the matrix. The 5 Panelists and The Judge cast their randomized pre-votes to kickstart the leaderboard.</p>
+                      <p className="text-xs text-slate-400 leading-relaxed">Gemma processes the matrix. The 5 Panelists and The Judge cast their randomized pre-votes to kickstart today's leaderboard.</p>
                     </div>
                   </div>
-                  <div className="bg-white/5 border border-white/5 p-4 rounded-2xl flex items-start gap-4">
+                  <div className="bg-white/5 border border-white/5 p-4 rounded-2xl flex items-start gap-4 hover:bg-white/10 transition-colors">
                     <span className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-black shrink-0">3</span>
                     <div>
                       <h4 className="text-white font-bold uppercase tracking-widest mb-1 text-sm">Live Audience Polling</h4>
                       <p className="text-xs text-slate-400 leading-relaxed">The leaderboard goes live! Audience members use the 'Cast Live Vote' button to allocate badges. Votes sync to Supabase in real-time.</p>
                     </div>
                   </div>
-                  <div className="bg-white/5 border border-white/5 p-4 rounded-2xl flex items-start gap-4">
+                  <div className="bg-white/5 border border-white/5 p-4 rounded-2xl flex items-start gap-4 hover:bg-white/10 transition-colors">
                     <span className="w-8 h-8 rounded-full bg-pink-500/20 text-pink-400 flex items-center justify-center font-black shrink-0">4</span>
                     <div>
                       <h4 className="text-white font-bold uppercase tracking-widest mb-1 text-sm">Grand Announcement</h4>
-                      <p className="text-xs text-slate-400 leading-relaxed">Click 'View Grand Results' to trigger the 3D celebration, crown the Grand Champion, and export the official PDF summary.</p>
+                      <p className="text-xs text-slate-400 leading-relaxed">Click 'Announce Winners' to trigger the 3D celebration, crown the Grand Champion, and export the official PDF summary.</p>
                     </div>
                   </div>
                 </div>
@@ -557,9 +565,9 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
               <button 
                 onClick={processVerdicts}
                 disabled={pendingFiles.length === 0}
-                className="w-full py-4 bg-pink-600 hover:bg-pink-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-black rounded-2xl uppercase tracking-widest transition-all shadow-lg shadow-pink-600/20 disabled:shadow-none"
+                className="w-full py-4 bg-pink-600 hover:bg-pink-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-black rounded-2xl uppercase tracking-widest transition-all shadow-lg shadow-pink-600/20 disabled:shadow-none flex items-center justify-center gap-2"
               >
-                Extract & Process Verdicts
+                Extract & Process Verdicts <ChevronLeft className="w-4 h-4 rotate-180" />
               </button>
             </div>
 
@@ -607,9 +615,12 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
                   <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter mb-2 font-mono flex items-center gap-3">
                     Achievement <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-500">Badges</span>
                   </h2>
-                  <p className="text-slate-400 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-pink-500" /> {currentDate}
-                  </p>
+                  <div className="flex items-center gap-3">
+                    <p className="text-slate-400 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-pink-500" /> {currentDate}
+                    </p>
+                    <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded text-[9px] font-bold uppercase tracking-widest">Filtered: Today Only</span>
+                  </div>
                 </div>
                 
                 <div className="flex items-center gap-4">
@@ -687,17 +698,29 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
                       <Trophy className="w-4 h-4 text-indigo-400" /> Overall Rankings
                     </h3>
                     <div className="space-y-4">
-                      {teamRankings.length > 0 ? teamRankings.map((tr, idx) => (
-                        <div key={idx} className="flex items-center justify-between">
-                          <div className="flex items-center gap-3 truncate pr-4">
-                            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${idx === 0 ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50' : idx === 1 ? 'bg-slate-300/20 text-slate-300 border border-slate-300/50' : idx === 2 ? 'bg-orange-500/20 text-orange-400 border border-orange-500/50' : 'bg-white/5 text-slate-500'}`}>
-                              {idx + 1}
-                            </span>
-                            <span className="text-xs font-bold text-slate-200 truncate">{tr.team}</span>
+                      {teamRankings.length > 0 ? teamRankings.map((tr, idx) => {
+                        const widthPercent = (tr.votes / maxRankVotes) * 100;
+                        return (
+                          <div key={idx} className="flex items-center justify-between relative py-2">
+                            <div 
+                              className={`absolute left-0 top-0 h-full rounded-r-lg -z-10 transition-all duration-1000 ease-out ${idx === 0 ? 'bg-indigo-500/20' : 'bg-white/5'}`}
+                              style={{ width: `${widthPercent}%` }}
+                            />
+                            <div className="flex items-center gap-3 truncate pr-4 relative z-10 pl-2">
+                              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${idx === 0 ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50' : idx === 1 ? 'bg-slate-300/20 text-slate-300 border border-slate-300/50' : idx === 2 ? 'bg-orange-500/20 text-orange-400 border border-orange-500/50' : 'bg-white/5 text-slate-500'}`}>
+                                {idx + 1}
+                              </span>
+                              <span className="text-xs font-bold text-slate-200 truncate">{tr.team}</span>
+                            </div>
+                            <span className="text-xs font-black text-indigo-400 shrink-0 pr-2 relative z-10">{tr.votes}</span>
                           </div>
-                          <span className="text-xs font-black text-indigo-400 shrink-0">{tr.votes}</span>
+                        );
+                      }) : (
+                        <div className="flex flex-col items-center py-6 opacity-40">
+                          <Trophy className="w-8 h-8 text-slate-500 mb-2" />
+                          <p className="text-xs text-slate-500 italic">No votes cast today.</p>
                         </div>
-                      )) : <p className="text-xs text-slate-500 italic">No votes cast yet.</p>}
+                      )}
                     </div>
                   </div>
 
@@ -725,7 +748,12 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
                               Voted <strong className="text-white">{feed.team_name}</strong> for <span className="text-indigo-300">{feed.badge_name}</span>.
                             </p>
                           </motion.div>
-                        )) : <p className="text-xs text-slate-500 italic">Network feed empty.</p>}
+                        )) : (
+                          <div className="flex flex-col items-center py-10 opacity-40 h-full justify-center">
+                            <Activity className="w-8 h-8 text-slate-500 mb-2" />
+                            <p className="text-xs text-slate-500 italic">Network feed empty.</p>
+                          </div>
+                        )}
                       </AnimatePresence>
                     </div>
                   </div>
@@ -848,15 +876,22 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
                         <Trophy className="w-6 h-6 text-amber-400" /> Final Leaderboard
                       </h3>
                       <div className="space-y-4">
-                        {teamRankings.map((tr, idx) => (
-                          <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.8 + (idx * 0.1) }} key={idx} className={`p-5 rounded-2xl border flex items-center justify-between ${idx === 0 ? 'bg-amber-500/10 border-amber-500/50 shadow-[0_0_20px_rgba(251,191,36,0.2)]' : 'bg-white/5 border-white/10'}`}>
-                            <div className="flex items-center gap-4">
-                              <span className={`text-2xl md:text-3xl font-black ${idx === 0 ? 'text-amber-400 drop-shadow-md' : 'text-slate-500'}`}>#{idx + 1}</span>
-                              <p className={`text-sm md:text-base font-black uppercase tracking-wider ${idx === 0 ? 'text-white' : 'text-slate-300'}`}>{tr.team}</p>
-                            </div>
-                            <span className={`text-sm font-black ${idx === 0 ? 'text-amber-400' : 'text-indigo-400'}`}>{tr.votes} Pts</span>
-                          </motion.div>
-                        ))}
+                        {teamRankings.map((tr, idx) => {
+                          const widthPercent = (tr.votes / maxRankVotes) * 100;
+                          return (
+                            <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.8 + (idx * 0.1) }} key={idx} className={`relative p-5 rounded-2xl border flex items-center justify-between overflow-hidden ${idx === 0 ? 'bg-amber-500/10 border-amber-500/50 shadow-[0_0_20px_rgba(251,191,36,0.2)]' : 'border-white/10'}`}>
+                              <div 
+                                className={`absolute left-0 top-0 h-full rounded-r-lg -z-10 transition-all duration-1000 ease-out ${idx === 0 ? 'bg-amber-500/20' : 'bg-white/5'}`}
+                                style={{ width: `${widthPercent}%` }}
+                              />
+                              <div className="flex items-center gap-4 relative z-10 pl-2">
+                                <span className={`text-2xl md:text-3xl font-black ${idx === 0 ? 'text-amber-400 drop-shadow-md' : 'text-slate-500'}`}>#{idx + 1}</span>
+                                <p className={`text-sm md:text-base font-black uppercase tracking-wider ${idx === 0 ? 'text-white' : 'text-slate-300'}`}>{tr.team}</p>
+                              </div>
+                              <span className={`text-sm font-black relative z-10 pr-2 ${idx === 0 ? 'text-amber-400' : 'text-indigo-400'}`}>{tr.votes} Pts</span>
+                            </motion.div>
+                          );
+                        })}
                       </div>
                     </div>
 
@@ -949,7 +984,7 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
                 {/* Right Side: Voting Summary for Current User */}
                 <div className="w-full md:w-64 border-t md:border-t-0 md:border-l border-white/10 pt-6 md:pt-0 md:pl-8 flex flex-col">
                   <h4 className="text-xs font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-white/10 pb-2">
-                    <UserCircle className="w-4 h-4 text-indigo-400" /> Your Votes
+                    <UserCircle className="w-4 h-4 text-indigo-400" /> Your Votes Today
                   </h4>
                   <div className="flex-1 overflow-y-auto scrollbar-hide space-y-3">
                     {userPastVotes.length > 0 ? userPastVotes.map((pv, idx) => (
@@ -961,7 +996,10 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
                         <Edit3 className="w-3 h-3 text-slate-500 group-hover:text-pink-400 transition-colors" />
                       </div>
                     )) : (
-                      <p className="text-xs text-slate-500 italic">No votes cast yet under this alias.</p>
+                      <div className="flex flex-col items-center py-6 opacity-40">
+                        <Award className="w-6 h-6 text-slate-500 mb-2" />
+                        <p className="text-xs text-slate-500 italic text-center">You haven't voted today.</p>
+                      </div>
                     )}
                   </div>
                 </div>
