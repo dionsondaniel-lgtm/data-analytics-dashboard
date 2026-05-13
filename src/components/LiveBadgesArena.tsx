@@ -3,10 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@supabase/supabase-js';
 import { 
   Trophy, Award, Sparkles, Star, Users, ChevronLeft, Loader2, 
-  BarChart3, Terminal, Code2, ShieldCheck, Zap, UploadCloud, X, 
-  CheckCircle2, Briefcase, HelpCircle, Gavel, Trash2, Mic, Volume2, 
+  BarChart3, Terminal, Code2, ShieldCheck, Zap, X, 
+  CheckCircle2, Briefcase, HelpCircle, Gavel, Mic, Volume2, 
   VolumeX, Download, Calendar, Activity, Edit3, UserCircle, 
-  Info, Crown, Radio, PartyPopper 
+  Info, Crown, Radio, PartyPopper, Clock, Rocket, Archive, Lock, Key, FileText, CheckSquare
 } from 'lucide-react';
 
 const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL || '';
@@ -33,22 +33,34 @@ const BADGES =[
   { id: 'best_teammates', name: 'Best Teammates', desc: 'Outstanding collaboration, synergy, and equal participation', rarity: 'Rare', icon: Star, color: 'text-orange-400', outerShape: 'rounded-full bg-orange-950/40 border-orange-500/50', innerShape: 'rounded-full bg-orange-500/20 border-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.5)]' }
 ];
 
-const AI_AGENTS =['Techy Eve', 'CEO Zeus', 'Alto', 'Data Leo', 'QA Max', 'The Judge'];
+const AI_AGENTS = ['Techy Eve', 'CEO Zeus', 'Alto', 'Data Leo', 'QA Max', 'The Judge'];
 
 export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => {
-  const [stage, setStage] = useState<'upload' | 'processing' | 'results'>('upload');
+  const [stage, setStage] = useState<'processing' | 'results'>('processing');
   const [dbTeams, setDbTeams] = useState<Team[]>([]);
   const [results, setResults] = useState<any[]>([]);
   const [recentFeed, setRecentFeed] = useState<any[]>([]);
   const [teamRankings, setTeamRankings] = useState<any[]>([]);
 
-  // File Upload State
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-
   // Modals
   const [showGuide, setShowGuide] = useState(false);
   const [showVoteModal, setShowVoteModal] = useState(false);
   const [showGrandResults, setShowGrandResults] = useState(false);
+
+  // Vault States
+  const [showVaultAuth, setShowVaultAuth] = useState(false);
+  const [showVault, setShowVault] = useState(false);
+  const [vaultPass, setVaultPass] = useState('');
+  const [vaultLoading, setVaultLoading] = useState(false);
+  const [vaultBucket, setVaultBucket] = useState<'verdicts' | 'grand_results'>('verdicts');
+  const [vaultFiles, setVaultFiles] = useState<any[]>([]);
+  const [selectedVaultFiles, setSelectedVaultFiles] = useState<string[]>([]);
+
+  // Voting Countdown State
+  const [showTimerSetup, setShowTimerSetup] = useState(false);
+  const [votingMinutes, setVotingMinutes] = useState(2);
+  const [votingTimeLeft, setVotingTimeLeft] = useState(0);
+  const [isVotingActive, setIsVotingActive] = useState(false);
 
   // Voting States
   const [voteAlias, setVoteAlias] = useState('');
@@ -58,17 +70,24 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
   const [voteSuccess, setVoteSuccess] = useState(false);
   const [userPastVotes, setUserPastVotes] = useState<any[]>([]);
 
-  // Gemma Audio State
+  // Gemma Audio & Easter Egg State
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [showUFO, setShowUFO] = useState(false);
 
-  // Helper: Get start of today (Local Timezone)
   const getStartOfToday = () => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d.toISOString();
   };
 
-  // Time Formatter
+  const getLocalDateString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const timeAgo = (dateStr: string) => {
     const seconds = Math.floor((new Date().getTime() - new Date(dateStr).getTime()) / 1000);
     if (seconds < 60) return `${seconds}s ago`;
@@ -76,6 +95,20 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
     if (minutes < 60) return `${minutes}m ago`;
     const hours = Math.floor(minutes / 60);
     return `${hours}h ago`;
+  };
+
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
   const speak = (text: string) => {
@@ -92,18 +125,81 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
     window.speechSynthesis.speak(utterance);
   };
 
+  // 1. AUTO FETCH & PROCESS ON MOUNT
   useEffect(() => {
-    fetchTeams();
     const savedAlias = localStorage.getItem('nova_voter_alias');
     if (savedAlias) setVoteAlias(savedAlias);
+    window.speechSynthesis?.getVoices();
 
-    setTimeout(() => {
-      speak("Welcome to today's Live Badges Arena. Restricted access mode active. Awaiting Ms. Ehn to upload the official verdicts.");
-    }, 1000);
+    const initializeArena = async () => {
+      speak("Welcome to today's Live Badges Arena. Accessing Supabase storage to extract today's official verdicts and initialize the matrix.");
+      
+      if (supabaseUrl) {
+        try {
+          const today = getStartOfToday();
+          const { data: files } = await supabase.storage.from('verdicts').list();
+          
+          if (files && files.length > 0) {
+            const todayFiles = files.filter(f => 
+              f.created_at && 
+              f.created_at >= today && 
+              !f.name.includes('.emptyFolderPlaceholder') && 
+              !f.name.startsWith('.')
+            );
 
-    window.speechSynthesis.getVoices();
+            const extractedNames = todayFiles.map(f => f.name.replace(/_Defense_Report/i, '').replace(/\.pdf/i, '').replace(/_[0-9]+$/i, '').replace(/_/g, ' ').trim() || "Unknown Team");
+            const uniqueTeams = Array.from(new Set(extractedNames)).filter(name => name.length > 0 && name !== 'Unknown Team');
+
+            const { data: existingDb } = await supabase.from('teams').select('id, team_name');
+            let updatedDbTeams = existingDb ||[];
+
+            for (const tName of uniqueTeams) {
+              let teamInfo = updatedDbTeams.find(t => t.team_name.toLowerCase() === tName.toLowerCase());
+              
+              if (!teamInfo) {
+                const { data: dbCheck } = await supabase.from('teams').select('id, team_name').ilike('team_name', tName).limit(1);
+                
+                if (dbCheck && dbCheck.length > 0) {
+                  teamInfo = dbCheck[0];
+                } else {
+                  const { data: newData } = await supabase.from('teams').insert([{ team_name: tName, cohort: 'Live Evaluation' }]).select('id, team_name').limit(1);
+                  if (newData && newData.length > 0) {
+                    teamInfo = newData[0];
+                  }
+                }
+                if (teamInfo && !updatedDbTeams.find(t => t.id === teamInfo!.id)) {
+                  updatedDbTeams.push(teamInfo);
+                }
+              }
+
+              if (teamInfo) {
+                 const { data: existingVotes } = await supabase.from('badge_votes').select('id').eq('team_id', teamInfo.id).in('voter_alias', AI_AGENTS).gte('created_at', today);
+                 if (!existingVotes || existingVotes.length === 0) {
+                    const agentVotes = AI_AGENTS.map(agent => ({
+                      voter_alias: agent,
+                      voter_type: agent === 'The Judge' ? 'judge' : 'agent',
+                      team_id: teamInfo!.id,
+                      badge_name: BADGES[Math.floor(Math.random() * BADGES.length)].name
+                    }));
+                    await supabase.from('badge_votes').insert(agentVotes);
+                 }
+              }
+            }
+            
+            const activeDbTeams = updatedDbTeams.filter(t => uniqueTeams.some(ut => ut.toLowerCase() === t.team_name.toLowerCase()));
+            const uniqueActiveTeams = Array.from(new Map(activeDbTeams.map(t => [t.id, t])).values());
+            setDbTeams(uniqueActiveTeams);
+          }
+        } catch (e) { console.error(e); }
+      }
+      
+      setTimeout(() => setStage('results'), 12000);
+    };
+
+    initializeArena();
   },[]);
 
+  // LIVE LEADERBOARD INTERVAL
   useEffect(() => {
     if (stage === 'results') {
       fetchLeaderboard();
@@ -113,19 +209,53 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
     }
   }, [stage]);
 
+  // FETCH PAST VOTES IF MODAL OPEN
   useEffect(() => {
     if (showVoteModal && voteAlias) {
       fetchUserPastVotes(voteAlias);
     }
   },[showVoteModal, voteAlias]);
 
-  const fetchTeams = async () => {
-    if (!supabaseUrl) return;
-    try {
-      const { data } = await supabase.from('teams').select('id, team_name');
-      if (data) setDbTeams(data);
-    } catch (err) { }
-  };
+  // AUDIENCE VOTING TIMER LOGIC
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isVotingActive && votingTimeLeft > 0) {
+      interval = setInterval(() => {
+        setVotingTimeLeft(prev => {
+          const next = prev - 1;
+          if (next === 10) speak("10");
+          if (next === 9) speak("9");
+          if (next === 8) speak("8");
+          if (next === 7) speak("7");
+          if (next === 6) speak("6");
+          if (next === 5) speak("5");
+          if (next === 4) speak("4");
+          if (next === 3) speak("3");
+          if (next === 2) speak("2");
+          if (next === 1) speak("1");
+          return next;
+        });
+      }, 1000);
+    } else if (votingTimeLeft === 0 && isVotingActive) {
+      setIsVotingActive(false);
+      handleGrandAnnounce();
+    }
+    return () => clearInterval(interval);
+  }, [isVotingActive, votingTimeLeft]);
+
+  // UFO EASTER EGG INTERVAL
+  useEffect(() => {
+    const hasJun = recentFeed.some(f => f.voter_alias.toLowerCase().includes('jun'));
+    if (hasJun) {
+      setShowUFO(true);
+      setTimeout(() => setShowUFO(false), 15000);
+      const ufoInterval = setInterval(() => {
+        setShowUFO(true);
+        setTimeout(() => setShowUFO(false), 15000); 
+      }, 1 * 60 * 1000); 
+      return () => clearInterval(ufoInterval);
+    }
+  }, [recentFeed]);
 
   const fetchUserPastVotes = async (alias: string) => {
     if (!supabaseUrl) return;
@@ -133,7 +263,7 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
       .from('badge_votes')
       .select('id, badge_name, team_id')
       .eq('voter_alias', alias)
-      .gte('created_at', getStartOfToday()); // STRICTLY TODAY
+      .gte('created_at', getStartOfToday()); 
     
     if (data) setUserPastVotes(data);
   };
@@ -142,7 +272,6 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
     if (!supabaseUrl) return; 
 
     try {
-      // FETCH STRICTLY TODAY'S VOTES
       const { data: voteData } = await supabase
         .from('badge_votes')
         .select('team_id, badge_name, voter_alias, created_at')
@@ -153,7 +282,7 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
 
       if (!voteData || !teamData) return;
 
-      const teamMap = new Map(teamData.map((t: any) =>[t.id, t.team_name]));
+      const teamMap = new Map(teamData.map((t: any) => [t.id, t.team_name]));
       
       const recent = voteData.slice(0, 15).map(v => ({
         ...v, team_name: teamMap.get(v.team_id) || 'Unknown Team'
@@ -168,7 +297,6 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
         
         if (!tally[row.badge_name]) tally[row.badge_name] = {};
         tally[row.badge_name][tName] = (tally[row.badge_name][tName] || 0) + 1;
-
         teamTotalTally[tName] = (teamTotalTally[tName] || 0) + 1;
       });
 
@@ -198,59 +326,11 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
     } catch (err) {}
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setPendingFiles(prev => [...prev, ...Array.from(e.target.files!)]);
-    }
-  };
-
-  const removeFile = (index: number) => {
-    setPendingFiles(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const processVerdicts = async () => {
-    if (pendingFiles.length === 0) return;
-    setStage('processing');
-    speak("Processing verdicts. Generating matrix and synchronizing AI agent votes with Supabase.");
-
-    const extractedNames = pendingFiles.map(f => f.name.replace(/_Defense_Report/i, '').replace(/\.pdf/i, '').replace(/_/g, ' ').trim() || "Unknown Team");
-    const uniqueTeams = Array.from(new Set(extractedNames));
-
-    let updatedDbTeams = [...dbTeams];
-
-    if (supabaseUrl) {
-      for (const tName of uniqueTeams) {
-        let teamInfo = updatedDbTeams.find(t => t.team_name === tName);
-        if (!teamInfo) {
-          const { data, error } = await supabase.from('teams').select('id, team_name').eq('team_name', tName).single();
-          if (data) {
-             teamInfo = data;
-          } else {
-             const { data: newData } = await supabase.from('teams').insert([{ team_name: tName, cohort: 'Live Evaluation' }]).select('id, team_name').single();
-             if (newData) {
-               updatedDbTeams.push(newData);
-               teamInfo = newData;
-             }
-          }
-        }
-
-        // AI Agents Cast Pre-Votes automatically for today
-        if (teamInfo) {
-          const agentVotes = AI_AGENTS.map(agent => ({
-            voter_alias: agent,
-            voter_type: agent === 'The Judge' ? 'judge' : 'agent',
-            team_id: teamInfo!.id,
-            badge_name: BADGES[Math.floor(Math.random() * BADGES.length)].name
-          }));
-          await supabase.from('badge_votes').insert(agentVotes);
-        }
-      }
-      setDbTeams(updatedDbTeams);
-    }
-
-    setTimeout(() => {
-      setStage('results');
-    }, 4500);
+  const startVotingTimer = () => {
+    setShowTimerSetup(false);
+    setVotingTimeLeft(votingMinutes * 60);
+    setIsVotingActive(true);
+    speak(`The voting timer is set for ${votingMinutes} minutes. Cast your votes now!`);
   };
 
   const submitAudienceVote = async (e: React.FormEvent) => {
@@ -279,10 +359,9 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
       fetchUserPastVotes(voteAlias);
 
       setTimeout(() => {
-        setShowVoteModal(false);
         setVoteSuccess(false);
         setVoteBadge(''); 
-      }, 2000);
+      }, 1500);
 
     } catch (err) {
       alert("Failed to connect to database.");
@@ -291,94 +370,121 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
     }
   };
 
-  // NATIVE jsPDF Export to bypass html2canvas oklch crash
+  const createGrandResultsPDFBlob = async () => {
+    const { default: jsPDF } = await import('jspdf');
+    const doc = new jsPDF('p', 'mm', 'a4');
+    let y = 20;
+    const margin = 15;
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    doc.setFillColor(255, 105, 180); 
+    doc.rect(0, 0, pageWidth, 40, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(22);
+    doc.text("OFFICIAL GRAND RESULTS", pageWidth/2, 22, { align: 'center' });
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text("LIVE BADGES ARENA & DEFENSE EVALUATION", pageWidth/2, 30, { align: 'center' });
+
+    y = 55;
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Date of Event: ${new Date().toLocaleDateString()}`, margin, y);
+    y += 15;
+
+    // SECTION 1: BADGES
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text("I. ACHIEVEMENT BADGES", margin, y);
+    doc.line(margin, y + 2, pageWidth - margin, y + 2);
+    y += 12;
+
+    doc.setFontSize(11);
+    if (results.length > 0) {
+      results.forEach(r => {
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Award: ${r.badge}`, margin, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Winner: ${r.team} (${r.votes} votes)`, margin + 80, y);
+        y += 8;
+        if (y > 270) { doc.addPage(); y = 20; }
+      });
+    } else {
+      doc.setFont('helvetica', 'italic');
+      doc.text("No badges awarded yet.", margin, y);
+      y += 8;
+    }
+    y += 10;
+
+    // SECTION 2: RANKINGS
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text("II. OVERALL TEAM LEADERBOARD", margin, y);
+    doc.line(margin, y + 2, pageWidth - margin, y + 2);
+    y += 12;
+
+    doc.setFontSize(11);
+    if (teamRankings.length > 0) {
+      teamRankings.forEach((tr, idx) => {
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Rank ${idx + 1}:`, margin, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${tr.team}`, margin + 25, y);
+        doc.text(`${tr.votes} Total Votes`, margin + 120, y);
+        y += 8;
+        if (y > 270) { doc.addPage(); y = 20; }
+      });
+    } else {
+      doc.setFont('helvetica', 'italic');
+      doc.text("No rankings available yet.", margin, y);
+      y += 8;
+    }
+
+    y += 20;
+    doc.setDrawColor(200);
+    doc.line(pageWidth/2 - 40, y, pageWidth/2 + 40, y);
+    y += 10;
+    doc.setFont('times', 'italic');
+    doc.setTextColor(150, 150, 150);
+    doc.text("Certified & Verified by Gemma & The Chief Overseer", pageWidth/2, y, { align: 'center' });
+
+    return doc.output('blob');
+  };
+
+  const handleGrandAnnounce = async () => {
+    let speech = "Attention everyone! The votes are in. It is time to announce the official Grand Results and crown our champions! ";
+    if (teamRankings.length > 0) {
+      speech += `The overall grand champion is ${teamRankings[0].team} with ${teamRankings[0].votes} points. `;
+      if (teamRankings.length > 1) speech += `In second place, ${teamRankings[1].team} with ${teamRankings[1].votes} points. `;
+      if (teamRankings.length > 2) speech += `And in third place, ${teamRankings[2].team}. `;
+    }
+    speak(speech);
+    setShowGrandResults(true);
+
+    // Auto-save Grand Results silently to Bucket
+    try {
+       const pdfBlob = await createGrandResultsPDFBlob();
+       const filename = `Grand_Arena_Results_${getLocalDateString()}.pdf`;
+       if (supabaseUrl) {
+          await supabase.storage.from('grand_results').upload(`today/${filename}`, pdfBlob, { upsert: true });
+       }
+    } catch (e) {
+       console.error("Auto-save failed", e);
+    }
+  };
+
   const exportGrandResultsPDF = async () => {
     try {
-      const { default: jsPDF } = await import('jspdf');
-      const doc = new jsPDF('p', 'mm', 'a4');
-      let y = 20;
-      const margin = 15;
-      const pageWidth = doc.internal.pageSize.getWidth();
-
-      // HEADER
-      doc.setFillColor(255, 105, 180); 
-      doc.rect(0, 0, pageWidth, 40, 'F');
-      
-      doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(22);
-      doc.text("OFFICIAL GRAND RESULTS", pageWidth/2, 22, { align: 'center' });
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'normal');
-      doc.text("LIVE BADGES ARENA & DEFENSE EVALUATION", pageWidth/2, 30, { align: 'center' });
-
-      y = 55;
-      doc.setTextColor(0, 0, 0);
-
-      // DATE
-      doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      doc.text(`Date of Event: ${new Date().toLocaleDateString()}`, margin, y);
-      y += 15;
-
-      // SECTION 1: BADGES
-      doc.setTextColor(0, 0, 0);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(14);
-      doc.text("I. ACHIEVEMENT BADGES", margin, y);
-      doc.line(margin, y + 2, pageWidth - margin, y + 2);
-      y += 12;
-
-      doc.setFontSize(11);
-      if (results.length > 0) {
-        results.forEach(r => {
-          doc.setFont('helvetica', 'bold');
-          doc.text(`Award: ${r.badge}`, margin, y);
-          doc.setFont('helvetica', 'normal');
-          doc.text(`Winner: ${r.team} (${r.votes} votes)`, margin + 80, y);
-          y += 8;
-          if (y > 270) { doc.addPage(); y = 20; }
-        });
-      } else {
-        doc.setFont('helvetica', 'italic');
-        doc.text("No badges awarded yet.", margin, y);
-        y += 8;
-      }
-      y += 10;
-
-      // SECTION 2: RANKINGS
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(14);
-      doc.text("II. OVERALL TEAM LEADERBOARD", margin, y);
-      doc.line(margin, y + 2, pageWidth - margin, y + 2);
-      y += 12;
-
-      doc.setFontSize(11);
-      if (teamRankings.length > 0) {
-        teamRankings.forEach((tr, idx) => {
-          doc.setFont('helvetica', 'bold');
-          doc.text(`Rank ${idx + 1}:`, margin, y);
-          doc.setFont('helvetica', 'normal');
-          doc.text(`${tr.team}`, margin + 25, y);
-          doc.text(`${tr.votes} Total Votes`, margin + 120, y);
-          y += 8;
-          if (y > 270) { doc.addPage(); y = 20; }
-        });
-      } else {
-        doc.setFont('helvetica', 'italic');
-        doc.text("No rankings available yet.", margin, y);
-        y += 8;
-      }
-
-      y += 20;
-      doc.setDrawColor(200);
-      doc.line(pageWidth/2 - 40, y, pageWidth/2 + 40, y);
-      y += 10;
-      doc.setFont('times', 'italic');
-      doc.setTextColor(150, 150, 150);
-      doc.text("Certified & Verified by Gemma & The Chief Overseer", pageWidth/2, y, { align: 'center' });
-
-      doc.save(`Grand_Arena_Results_${new Date().toISOString().split('T')[0]}.pdf`);
+      const blob = await createGrandResultsPDFBlob();
+      const filename = `Grand_Arena_Results_${getLocalDateString()}.pdf`;
+      const a = document.createElement('a'); 
+      a.href = URL.createObjectURL(blob); 
+      a.download = filename; 
+      a.click();
     } catch (e) {
       console.error("Native PDF Generation Failed", e);
     }
@@ -388,17 +494,102 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
     setVoteBadge(badgeName);
   };
 
-  const handleGrandAnnounce = () => {
-    speak("Attention everyone! The votes are in. It is time to announce the official Grand Results and crown our champions!");
-    setShowGrandResults(true);
+  const handleVaultAuthSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (vaultPass === "LED") {
+      setShowVaultAuth(false);
+      setVaultPass('');
+      setShowVault(true);
+    } else {
+      alert("Invalid Access Code.");
+      setVaultPass('');
+    }
+  };
+
+  const loadVaultFiles = async (bucket: 'verdicts' | 'grand_results') => {
+    setVaultBucket(bucket);
+    setSelectedVaultFiles([]);
+    if (!supabaseUrl) return;
+    setVaultLoading(true);
+    try {
+      const folderPath = bucket === 'grand_results' ? 'today' : '';
+      const { data } = await supabase.storage.from(bucket).list(folderPath, { sortBy: { column: 'created_at', order: 'desc' } });
+      if (data) {
+        setVaultFiles(data.filter(f => !f.name.includes('.emptyFolderPlaceholder') && !f.name.startsWith('.')));
+      }
+    } catch (e) { console.error(e); }
+    setVaultLoading(false);
+  };
+
+  useEffect(() => {
+    if (showVault) loadVaultFiles('verdicts');
+  }, [showVault]);
+
+  const toggleVaultFileSelection = (filename: string) => {
+    setSelectedVaultFiles(prev => prev.includes(filename) ? prev.filter(f => f !== filename) : [...prev, filename]);
+  };
+
+  // Helper Delay for bulk download
+  const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
+  const handleVaultDownload = async () => {
+    if (selectedVaultFiles.length === 0) return alert("Select files to download first.");
+    for (const filename of selectedVaultFiles) {
+      const filePath = vaultBucket === 'grand_results' ? `today/${filename}` : filename;
+      const { data } = await supabase.storage.from(vaultBucket).download(filePath);
+      if (data) {
+        const url = window.URL.createObjectURL(data);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      }
+      await delay(300); // Prevent browser blocking multiple downloads
+    }
+    setSelectedVaultFiles([]);
   };
 
   const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const maxRankVotes = teamRankings.length > 0 ? teamRankings[0].votes : 1;
 
-  // 3D Balloon & Confetti Component
+  // Spinning Images Loading Component
+  const SpinningLoader = () => {
+    const images = Array.from({ length: 12 }, (_, i) => `${i + 1}.jpg`); 
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[500] flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur-md">
+        <div className="relative w-64 h-64 animate-[spin_20s_linear_infinite]">
+          {images.map((img, i) => {
+            const angle = (i / images.length) * 2 * Math.PI;
+            return (
+              <div 
+                key={i} 
+                className="absolute w-12 h-12 rounded-lg border-2 border-pink-500 overflow-hidden shadow-[0_0_15px_rgba(244,114,182,0.5)] bg-slate-800"
+                style={{
+                  top: `calc(50% - ${Math.cos(angle) * 100}px)`,
+                  left: `calc(50% + ${Math.sin(angle) * 100}px)`,
+                  transform: 'translate(-50%, -50%)'
+                }}
+              >
+                <img src={`/5TH/${img}`} alt="loading" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
+              </div>
+            )
+          })}
+          <div className="absolute inset-0 flex items-center justify-center">
+             <Sparkles className="w-10 h-10 text-pink-400 animate-pulse" />
+          </div>
+        </div>
+        {isVotingActive ? (
+           <p className="mt-12 font-black uppercase tracking-widest text-pink-400 animate-pulse text-4xl font-mono">{formatTime(votingTimeLeft)}</p>
+        ) : (
+           <p className="mt-12 font-black uppercase tracking-widest text-pink-400 animate-pulse">Syncing Leaderboard...</p>
+        )}
+      </motion.div>
+    );
+  };
+
   const CelebrationBalloons = () => {
-    const colors =['from-pink-500 to-rose-600', 'from-yellow-400 to-orange-500', 'from-indigo-500 to-purple-600', 'from-emerald-400 to-teal-500', 'from-cyan-400 to-blue-600'];
+    const colors = ['from-pink-500 to-rose-600', 'from-yellow-400 to-orange-500', 'from-indigo-500 to-purple-600', 'from-emerald-400 to-teal-500', 'from-cyan-400 to-blue-600'];
     const confettiColors = ['bg-pink-500', 'bg-yellow-400', 'bg-indigo-500', 'bg-emerald-400', 'bg-white'];
     
     return (
@@ -435,12 +626,32 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
     <AnimatePresence>
       <div className="fixed inset-0 z-[300] bg-[#0B0E14] flex flex-col overflow-hidden font-sans">
         
+        {/* UFO Easter Egg for 'Jun' */}
+        <AnimatePresence>
+          {showUFO && (
+            <motion.div 
+              initial={{ x: '100vw', y: '80vh', scale: 0.5 }}
+              animate={{ x: '-20vw', y: '10vh', scale: 1.5 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 12, ease: "linear" }}
+              className="absolute z-[700] pointer-events-none flex flex-col items-center"
+            >
+              <Rocket className="w-16 h-16 text-emerald-400 animate-pulse drop-shadow-[0_0_20px_rgba(52,211,153,0.8)] transform -rotate-45" />
+              <div className="bg-emerald-950/80 border border-emerald-500/50 px-4 py-2 rounded-full mt-2 shadow-[0_0_20px_rgba(52,211,153,0.4)] whitespace-nowrap">
+                <span className="text-emerald-300 font-black text-[10px] tracking-widest uppercase">Thank you Sir Jun for having you in this live broadcast!</span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <style>{`
           .clip-path-hexagon { clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); }
           .clip-path-shield { clip-path: polygon(50% 0%, 100% 0, 100% 80%, 50% 100%, 0 80%, 0 0); }
           .clip-path-heavy-shield { clip-path: polygon(10% 0, 90% 0, 100% 20%, 50% 100%, 0 20%); }
           .scrollbar-hide::-webkit-scrollbar { display: none; }
         `}</style>
+
+        {isVotingActive && <SpinningLoader />}
 
         {/* HEADER */}
         <div className="h-16 border-b border-white/5 px-4 md:px-6 flex items-center justify-between bg-black/40 backdrop-blur-md relative z-20 shrink-0">
@@ -449,6 +660,9 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
           </button>
           
           <div className="flex items-center gap-4 md:gap-6">
+            <button onClick={() => setShowVaultAuth(true)} className="text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest bg-cyan-500/10 px-3 py-1.5 rounded-full border border-cyan-500/30 shadow-[0_0_15px_rgba(34,211,238,0.2)]">
+              <Archive className="w-4 h-4" /> Vault
+            </button>
             <button onClick={() => setShowGuide(true)} className="text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest bg-indigo-500/10 px-3 py-1.5 rounded-full border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
               <Info className="w-4 h-4" /> Guide
             </button>
@@ -461,6 +675,128 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
             </div>
           </div>
         </div>
+
+        {/* VAULT AUTH MODAL */}
+        <AnimatePresence>
+          {showVaultAuth && (
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 z-[700] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+            >
+              <motion.div 
+                initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+                className="bg-[#121620] border border-cyan-500/30 p-8 rounded-[2rem] shadow-[0_0_50px_rgba(34,211,238,0.2)] w-full max-w-sm relative text-center"
+              >
+                <button onClick={() => setShowVaultAuth(false)} className="absolute top-6 right-6 text-slate-500 hover:text-white"><X className="w-6 h-6"/></button>
+                <Lock className="w-16 h-16 text-cyan-400 mx-auto mb-4" />
+                <h2 className="text-2xl font-black text-white uppercase tracking-widest mb-2">Vault Access</h2>
+                <p className="text-xs text-slate-400 mb-6">Enter passphrase to access database files.</p>
+                <form onSubmit={handleVaultAuthSubmit}>
+                  <input 
+                    type="password" required value={vaultPass} onChange={e => setVaultPass(e.target.value)}
+                    placeholder="••••"
+                    className="w-full bg-black/50 border border-white/10 text-white text-center rounded-xl px-4 py-3 text-2xl font-bold mb-6 outline-none focus:border-cyan-500 tracking-widest"
+                  />
+                  <button type="submit" className="w-full py-4 bg-cyan-600 hover:bg-cyan-500 text-slate-900 font-black rounded-xl uppercase tracking-widest transition-colors flex items-center justify-center gap-2">
+                    <Key className="w-4 h-4" /> Unlock Vault
+                  </button>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* VAULT DATA MODAL */}
+        <AnimatePresence>
+          {showVault && (
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 z-[700] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 md:p-8"
+            >
+              <motion.div 
+                initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
+                className="bg-[#121620] border border-white/10 rounded-[2rem] shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col relative overflow-hidden"
+              >
+                <div className="absolute top-0 left-0 w-64 h-64 bg-cyan-500/10 blur-[80px] pointer-events-none" />
+
+                <div className="flex justify-between items-center p-6 md:p-8 border-b border-white/10 relative z-10 shrink-0">
+                  <div>
+                    <h2 className="text-2xl md:text-3xl font-black text-cyan-400 uppercase tracking-widest flex items-center gap-3">
+                      <Archive className="w-6 h-6" /> Storage Vault
+                    </h2>
+                    <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-2">Manage generated PDF exports</p>
+                  </div>
+                  <button onClick={() => setShowVault(false)} className="text-slate-500 hover:text-white p-2 bg-white/5 rounded-full transition-colors">
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+
+                <div className="p-4 md:p-8 flex flex-col h-full relative z-10">
+                  <div className="flex bg-black/40 border border-white/10 rounded-full p-1 mb-6 max-w-sm">
+                    <button onClick={() => loadVaultFiles('verdicts')} className={`flex-1 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${vaultBucket === 'verdicts' ? 'bg-cyan-600 text-slate-900 shadow-md' : 'text-slate-400 hover:text-white'}`}>
+                      Team Verdicts
+                    </button>
+                    <button onClick={() => loadVaultFiles('grand_results')} className={`flex-1 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${vaultBucket === 'grand_results' ? 'bg-cyan-600 text-slate-900 shadow-md' : 'text-slate-400 hover:text-white'}`}>
+                      Grand Results
+                    </button>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto scrollbar-hide border border-white/5 rounded-2xl bg-black/20">
+                    {vaultLoading ? (
+                      <div className="flex flex-col items-center justify-center h-full text-cyan-500">
+                        <Loader2 className="w-8 h-8 animate-spin mb-4" />
+                        <span className="text-xs font-bold uppercase tracking-widest">Fetching DB Records...</span>
+                      </div>
+                    ) : vaultFiles.length > 0 ? (
+                      <table className="w-full text-left text-sm text-slate-300">
+                        <thead className="bg-white/5 text-xs uppercase font-bold text-slate-400 sticky top-0 backdrop-blur-md">
+                          <tr>
+                            <th className="p-4 w-12 text-center">
+                              <CheckSquare className="w-4 h-4 text-slate-500 mx-auto" />
+                            </th>
+                            <th className="p-4">Filename</th>
+                            <th className="p-4 hidden md:table-cell">Size</th>
+                            <th className="p-4">Date Modified</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {vaultFiles.map((file, i) => (
+                            <tr key={i} className="border-t border-white/5 hover:bg-white/5 transition-colors cursor-pointer" onClick={() => toggleVaultFileSelection(file.name)}>
+                              <td className="p-4 text-center">
+                                <input type="checkbox" checked={selectedVaultFiles.includes(file.name)} readOnly className="accent-cyan-500 w-4 h-4 cursor-pointer" />
+                              </td>
+                              <td className="p-4 font-medium text-white flex items-center gap-3">
+                                <FileText className="w-4 h-4 text-cyan-400 shrink-0" />
+                                <span className="truncate max-w-[200px] md:max-w-[400px] block">{file.name}</span>
+                              </td>
+                              <td className="p-4 hidden md:table-cell text-slate-400 font-mono text-xs">{formatBytes(file.metadata?.size || 0)}</td>
+                              <td className="p-4 text-slate-400 font-mono text-xs">{new Date(file.created_at).toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full opacity-50">
+                        <Archive className="w-12 h-12 text-slate-500 mb-4" />
+                        <span className="text-sm font-bold uppercase tracking-widest text-slate-400">Bucket is empty.</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-6 border-t border-white/10 flex justify-between items-center shrink-0 relative z-10 bg-[#121620]">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{selectedVaultFiles.length} files selected</p>
+                  <button 
+                    onClick={handleVaultDownload} disabled={selectedVaultFiles.length === 0}
+                    className="px-6 py-3 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-800 disabled:text-slate-500 text-slate-900 font-black rounded-xl uppercase tracking-widest transition-all shadow-lg flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" /> Download Selected
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* GUIDE MODAL */}
         <AnimatePresence>
@@ -485,8 +821,8 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
                   <div className="bg-white/5 border border-white/5 p-4 rounded-2xl flex items-start gap-4 hover:bg-white/10 transition-colors">
                     <span className="w-8 h-8 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center font-black shrink-0">1</span>
                     <div>
-                      <h4 className="text-white font-bold uppercase tracking-widest mb-1 text-sm">Verdict Upload (Ms. Ehn Only)</h4>
-                      <p className="text-xs text-slate-400 leading-relaxed">Ms. Ehn uploads the officially exported PDF Defense Reports. The AI parses the filenames to establish the participating teams.</p>
+                      <h4 className="text-white font-bold uppercase tracking-widest mb-1 text-sm">Verdict Auto-Sync</h4>
+                      <p className="text-xs text-slate-400 leading-relaxed">The system automatically fetches officially exported PDF Defense Reports created today from the secure Supabase bucket.</p>
                     </div>
                   </div>
                   <div className="bg-white/5 border border-white/5 p-4 rounded-2xl flex items-start gap-4 hover:bg-white/10 transition-colors">
@@ -520,68 +856,34 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
           )}
         </AnimatePresence>
 
-        {/* STAGE 1: UPLOAD */}
-        {stage === 'upload' && (
-          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center relative z-10 overflow-y-auto">
-            <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="w-24 h-24 bg-pink-500/10 rounded-full flex items-center justify-center mb-6 border-2 border-pink-500/50 shadow-[0_0_50px_rgba(244,114,182,0.3)]">
-              <Mic className="w-10 h-10 text-pink-400" />
-            </motion.div>
-            
-            <h2 className="text-4xl font-black text-white uppercase tracking-tighter mb-4">Gemma Awaits the Verdicts</h2>
-            
-            <div className="bg-rose-950/30 border border-rose-500/30 p-4 rounded-2xl max-w-lg mx-auto mb-8 flex items-start gap-3 text-left">
-              <ShieldCheck className="w-6 h-6 text-rose-500 shrink-0 mt-1" />
-              <div>
-                <p className="text-rose-400 font-black text-xs uppercase tracking-widest mb-1">Restricted Access</p>
-                <p className="text-rose-200/80 text-xs leading-relaxed">
-                  Uploading verdicts is strictly authorized for <strong>Ms. Ehn</strong>. Unauthorized injection of files will result in data desynchronization.
-                </p>
-              </div>
-            </div>
-
-            <div className="w-full max-w-2xl mx-auto space-y-4">
-              <div className="border-2 border-dashed border-pink-500/30 bg-pink-900/5 rounded-3xl p-8 text-center hover:bg-pink-900/10 transition-colors relative cursor-pointer group">
-                <input type="file" multiple onChange={handleFileSelect} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".pdf" />
-                <UploadCloud className="w-10 h-10 text-pink-500/50 mx-auto mb-3 group-hover:scale-110 group-hover:text-pink-400 transition-all" />
-                <p className="text-white font-bold text-sm uppercase tracking-widest mb-1">Select PDF Verdicts</p>
-                <p className="text-slate-500 text-[10px] uppercase">Drag & Drop files here</p>
-              </div>
-
-              {pendingFiles.length > 0 && (
-                <div className="bg-[#121620] border border-white/5 rounded-3xl p-4 max-h-48 overflow-y-auto scrollbar-hide space-y-2">
-                  <div className="flex justify-between items-center mb-3 px-2">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{pendingFiles.length} Files Queued</span>
-                    <button onClick={() => setPendingFiles([])} className="text-[10px] text-rose-400 hover:text-rose-300 uppercase font-bold">Clear All</button>
-                  </div>
-                  {pendingFiles.map((f, i) => (
-                    <div key={i} className="flex items-center justify-between bg-black/40 border border-white/5 p-3 rounded-xl">
-                      <span className="text-xs text-slate-300 truncate pr-4">{f.name}</span>
-                      <button onClick={() => removeFile(i)} className="text-slate-500 hover:text-rose-400 p-1"><Trash2 className="w-4 h-4" /></button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <button 
-                onClick={processVerdicts}
-                disabled={pendingFiles.length === 0}
-                className="w-full py-4 bg-pink-600 hover:bg-pink-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-black rounded-2xl uppercase tracking-widest transition-all shadow-lg shadow-pink-600/20 disabled:shadow-none flex items-center justify-center gap-2"
-              >
-                Extract & Process Verdicts <ChevronLeft className="w-4 h-4 rotate-180" />
-              </button>
-            </div>
-
-            <motion.button 
-              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-              onClick={() => { fetchTeams(); setStage('results'); }} 
-              className="mt-8 px-8 py-3 bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-500 hover:text-white rounded-full text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(99,102,241,0.2)]"
+        {/* TIMER SETUP MODAL */}
+        <AnimatePresence>
+          {showTimerSetup && (
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 z-[600] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
             >
-              <Sparkles className="w-4 h-4" /> Jump to Live Leaderboard
-            </motion.button>
-          </div>
-        )}
+              <motion.div 
+                initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+                className="bg-[#121620] border border-white/10 p-8 rounded-[2rem] shadow-2xl w-full max-w-sm relative text-center"
+              >
+                <button onClick={() => setShowTimerSetup(false)} className="absolute top-6 right-6 text-slate-500 hover:text-white"><X className="w-6 h-6"/></button>
+                <Clock className="w-16 h-16 text-pink-400 mx-auto mb-4" />
+                <h2 className="text-2xl font-black text-white uppercase tracking-widest mb-2">Voting Timer</h2>
+                <p className="text-xs text-slate-400 mb-6">Set duration for live audience polling.</p>
+                <input 
+                   type="number" min="1" max="60" value={votingMinutes} onChange={e => setVotingMinutes(Number(e.target.value))}
+                   className="w-full bg-black/50 border border-white/10 text-white text-center rounded-xl px-4 py-3 text-2xl font-bold mb-6 outline-none focus:border-pink-500"
+                />
+                <button onClick={startVotingTimer} className="w-full py-4 bg-pink-600 hover:bg-pink-500 text-white font-black rounded-xl uppercase tracking-widest transition-colors">
+                  Start Countdown
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* STAGE 2: PROCESSING */}
+        {/* STAGE 1: PROCESSING BUCKET */}
         {stage === 'processing' && (
           <div className="flex-1 flex flex-col items-center justify-center p-6 text-center relative z-10">
             <div className="relative mb-8">
@@ -590,7 +892,7 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
             </div>
             <h2 className="text-2xl font-black text-white uppercase tracking-widest mb-4">Gemma is Analyzing Data...</h2>
             <p className="text-pink-300/80 font-mono text-sm max-w-md mx-auto mb-8">
-              Syncing groups with Supabase & injecting AI Panel preliminary votes.
+              Auto-syncing today's verdicts from Supabase bucket & injecting AI Panel preliminary votes.
             </p>
             <div className="flex gap-4 animate-pulse opacity-50 bg-black/40 p-4 rounded-2xl border border-white/5">
               <Terminal className="w-6 h-6 text-cyan-500"/>
@@ -623,9 +925,12 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 flex-wrap justify-center md:justify-end">
                   <button onClick={() => speak("The leaderboard is live! Audience, cast your votes now to decide the ultimate winners.")} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 transition-colors border border-slate-600">
                     <Volume2 className="w-3 h-3" /> Gemma Intro
+                  </button>
+                  <button onClick={() => setShowTimerSetup(true)} className="px-4 py-2 bg-slate-800 hover:bg-pink-600 text-slate-300 hover:text-white rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 transition-colors border border-slate-600 hover:border-pink-500">
+                    <Clock className="w-3 h-3" /> Set Timer
                   </button>
                   <button 
                     onClick={handleGrandAnnounce} 

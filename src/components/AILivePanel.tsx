@@ -1,15 +1,20 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createClient } from '@supabase/supabase-js';
 import { 
   X, UploadCloud, File as FileIcon, Play, Terminal, Briefcase, HelpCircle, 
   Gavel, Mail, Sparkles, Loader2, Download, Table, BarChart3, Code2, Database, 
   ShieldCheck, Lock, CheckCircle2, UserCircle, Info, FileText, RefreshCw, 
-  ArrowRight, Award, Users, Clock, Timer, AlertTriangle, Volume2, VolumeX
+  ArrowRight, Award, Users, Clock, Timer, AlertTriangle, Volume2, VolumeX, Mic, Keyboard
 } from 'lucide-react';
 import { Learner } from '../types';
 import { LiveBadgesArena } from './LiveBadgesArena';
 
-interface AILivePanelProps {
+const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL || '';
+const supabaseKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseKey || 'placeholder');
+
+export interface AILivePanelProps {
   isOpen: boolean;
   onClose: () => void;
   learners: Learner[];
@@ -32,6 +37,13 @@ const MODULE_OPTIONS =[
   { id: 'Python', label: 'Python Analytics', icon: Code2 },
 ];
 
+const TEAMS_5TH: Record<string, string[]> = {
+  "Team Fusion": ["Ariel Samar", "Cherryday Derecho", "Jean Marrie Dapal", "Gerald Dacoron", "Wilberto Bitonga Jr."],
+  "Team Sheetheads": ["Jomarey Aresco", "Varick Sy", "Euniel Bayato", "Peegee Pearl Bordaje"],
+  "Team Intercellar": ["Roselle Rabanes", "Clifford Villamor", "Jessel Christma Nudalo", "Garry Villasencio"],
+  "Team Curious City": ["Methoe Shela Calan", "Jesah Carla Coloyan", "Christian Singco", "Dennis Claros"]
+};
+
 type AgentId = 'eve' | 'zeus' | 'alto' | 'leo' | 'max';
 type Difficulty = 'Easy' | 'Intermediate' | 'Hard';
 
@@ -45,11 +57,9 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [activeModel, setActiveModel] = useState<string>('gemini-3-flash-preview');
 
-  // AUDIO & INTRO SEQUENCE STATES
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [introSequence, setIntroSequence] = useState(0);
 
-  // TEAM / MEMBER STATES
   const [teamName, setTeamName] = useState('');
   const [selectedCohort, setSelectedCohort] = useState('5TH');
   const [selectedPresenters, setSelectedPresenters] = useState<string[]>([]);
@@ -74,7 +84,6 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
   const [loginPassword, setLoginPassword] = useState('');
   const [loggedInUser, setLoggedInUser] = useState('');
 
-  // TIMER STATES
   const [hasPresented, setHasPresented] = useState(false);
   const [showPresentationTimer, setShowPresentationTimer] = useState(false);
   const [presentationTimeLeft, setPresentationTimeLeft] = useState(15 * 60); 
@@ -82,9 +91,31 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
   const [isQnaActive, setIsQnaActive] = useState(false);
   const [isTimedOut, setIsTimedOut] = useState(false);
 
-  // Derived Cohorts and Learners
+  const [isListening, setIsListening] = useState<AgentId | null>(null);
+  const recognitionRef = useRef<any>(null);
+
   const availableCohorts = useMemo(() => Array.from(new Set(learners.map(l => l.COHORT_NO).filter(Boolean))), [learners]);
   const filteredLearners = useMemo(() => learners.filter(l => l.COHORT_NO === selectedCohort), [learners, selectedCohort]);
+
+  const handleTeamSelection = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
+    const val = e.target.value;
+    setTeamName(val);
+    if (selectedCohort === '5TH' && TEAMS_5TH[val]) {
+      setSelectedMembers(TEAMS_5TH[val]);
+    }
+  };
+
+  const auraSpeak = (text: string) => {
+    if (!soundEnabled || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.2;
+    const voices = window.speechSynthesis.getVoices();
+    const femaleVoice = voices.find(v => v.name.includes('Female') || v.name.includes('Samantha') || v.name.includes('Zira'));
+    if (femaleVoice) utterance.voice = femaleVoice;
+    window.speechSynthesis.speak(utterance);
+  };
 
   useEffect(() => {
     const fetchModels = async () => {
@@ -133,12 +164,13 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
       setQnaTimeLeft(10 * 60);
       setIsQnaActive(false);
       setIsTimedOut(false);
+      setIsListening(null);
     } else {
       window.speechSynthesis?.cancel();
+      if (recognitionRef.current) recognitionRef.current.stop();
     }
   }, [isOpen]);
 
-  // Handle Intro Sequence Timing - ONLY RUN WHEN OPEN
   useEffect(() => {
     if (!isOpen) return;
     if (stage === 'intro' && introSequence === 0) {
@@ -147,7 +179,6 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     }
   }, [stage, introSequence, isOpen]);
 
-  // Handle Aura's Speech - ONLY RUN WHEN OPEN
   useEffect(() => {
     if (!isOpen || stage !== 'intro') {
        window.speechSynthesis?.cancel();
@@ -155,7 +186,6 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     }
 
     let timeoutId: NodeJS.Timeout;
-    
     const playStep = (text: string, nextStep: number, delayMs: number) => {
        if (!soundEnabled || !('speechSynthesis' in window)) {
            timeoutId = setTimeout(() => setIntroSequence(nextStep), delayMs);
@@ -165,19 +195,12 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
        const utterance = new SpeechSynthesisUtterance(text);
        utterance.rate = 1.0;
        utterance.pitch = 1.2; 
-       
        const voices = window.speechSynthesis.getVoices();
-       const femaleVoice = voices.find(v => v.name.includes('Female') || v.name.includes('Samantha') || v.name.includes('Google UK English Female') || v.name.includes('Zira'));
+       const femaleVoice = voices.find(v => v.name.includes('Female') || v.name.includes('Samantha') || v.name.includes('Zira'));
        if (femaleVoice) utterance.voice = femaleVoice;
 
-       utterance.onend = () => {
-           setIntroSequence(nextStep);
-       };
-       // Backup fallback in case onend doesn't fire
-       timeoutId = setTimeout(() => {
-           setIntroSequence(prev => prev < nextStep ? nextStep : prev);
-       }, delayMs + 3000); 
-
+       utterance.onend = () => setIntroSequence(nextStep);
+       timeoutId = setTimeout(() => setIntroSequence(prev => prev < nextStep ? nextStep : prev), delayMs + 3000); 
        window.speechSynthesis.speak(utterance);
     }
 
@@ -186,7 +209,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     } else if (introSequence === 2) {
         playStep("Step 1. Team Setup. Select your members and presenters from the cohort.", 3, 3500);
     } else if (introSequence === 3) {
-        playStep("Step 2. Present. You will have a strict fifteen minute timer for your pitch.", 4, 4000);
+        playStep("Step 2. Presentation. You will have a strict fifteen minute timer for your pitch.", 4, 4000);
     } else if (introSequence === 4) {
         playStep("Step 3. A I Defense. Upload your P D F and face the five Panelists.", 5, 4000);
     } else if (introSequence === 5) {
@@ -196,13 +219,13 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     return () => clearTimeout(timeoutId);
   }, [introSequence, stage, soundEnabled, isOpen]);
 
-
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (showPresentationTimer && presentationTimeLeft > 0) {
       interval = setInterval(() => setPresentationTimeLeft(prev => prev - 1), 1000);
     } else if (presentationTimeLeft === 0 && showPresentationTimer) {
       finishPresentation();
+      auraSpeak("Time is up for the presentation. Upload your Presentation File now to start the defense.");
     }
     return () => clearInterval(interval);
   }, [showPresentationTimer, presentationTimeLeft]);
@@ -218,7 +241,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
   }, [stage, isQnaActive, qnaTimeLeft]);
 
   const startPresentation = () => {
-    if (!teamName) return alert("Please enter the Group Number/Team Name first!");
+    if (!teamName) return alert("Please select or enter the Group Number/Team Name first!");
     setShowPresentationTimer(true);
   };
 
@@ -371,9 +394,53 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     setActiveSpeaker(firstAgent.charAt(0).toUpperCase() + firstAgent.slice(1));
   };
 
+  const toggleSpeechRecognition = (agentId: AgentId) => {
+    if (isListening === agentId) {
+      if (recognitionRef.current) recognitionRef.current.stop();
+      setIsListening(null);
+    } else {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        return alert("Speech Recognition is not supported in this browser. Please use Chrome.");
+      }
+      
+      if (recognitionRef.current) recognitionRef.current.stop();
+
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      
+      let finalTranscript = answers[agentId] || '';
+      
+      recognition.onresult = (event: any) => {
+        let interimTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript + ' ';
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+        setAnswers(prev => ({ ...prev, [agentId]: finalTranscript + interimTranscript }));
+      };
+      
+      recognition.onerror = () => setIsListening(null);
+      recognition.onend = () => setIsListening(null);
+      
+      recognitionRef.current = recognition;
+      recognition.start();
+      setIsListening(agentId);
+    }
+  };
+
   const handleNextQuestion = () => {
     const activeAgent = qnaOrder[currentQIndex];
     if (!answers[activeAgent]) return;
+    
+    if (isListening) {
+      if (recognitionRef.current) recognitionRef.current.stop();
+      setIsListening(null);
+    }
 
     if (currentQIndex < 4) {
       const nextIndex = currentQIndex + 1;
@@ -389,6 +456,10 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
   const handleForceTimeout = () => {
     setIsQnaActive(false);
     setIsTimedOut(true);
+    if (isListening) {
+      if (recognitionRef.current) recognitionRef.current.stop();
+      setIsListening(null);
+    }
     submitAnswersAndGrade(true, true);
   };
 
@@ -448,11 +519,22 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     setActiveSpeaker('Nova');
     
     if (!report.includes('⚠️')) {
-      setTimeout(() => handleDownload('pdf', report), 500); 
+      // 1) Trigger Auto Download
+      handleDownload('pdf', report);
+      
+      // 2) Auto Upload to Supabase bucket
+      const pdfBlob = await generatePDFBlob(report);
+      const filename = `${teamName.replace(/\s+/g, '_')}_Defense_Report.pdf`;
+      if (supabaseUrl) {
+         try {
+           await supabase.storage.from('verdicts').upload(`${filename}`, pdfBlob, { upsert: true });
+         } catch (e) {
+           console.error("Auto-bucket save failed", e);
+         }
+      }
     }
   };
 
-  // PARSER: Extracts clean text and the Rubric Array
   const parseRubric = (report: string) => {
     let cleanText = report;
     const rubricData: any[] =[];
@@ -486,7 +568,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     return { cleanText, rubricData, finalScore };
   };
 
-  const generatePDFBase64 = async (reportContent: string): Promise<string> => {
+  const generatePDFBlob = async (reportContent: string): Promise<Blob> => {
     const { default: jsPDF } = await import('jspdf');
     const doc = new jsPDF();
     let y = 20;
@@ -508,7 +590,6 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     
     y += 15;
     
-    // DRAW PDF TABLE ONLY IF RUBRIC WAS GENERATED
     if (rubricData.length > 0) {
       if (y > pageHeight - 100) { doc.addPage(); y = 20; }
       const cw = [70, 30, 40, 40]; 
@@ -525,7 +606,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
       doc.text("Panelist: The Chief Overseer", margin + 2, y + 6);
       y += 8;
       
-      doc.setFillColor(32, 55, 100); // Navy Blue
+      doc.setFillColor(32, 55, 100); 
       doc.rect(margin, y, tw/2, 8, 'FD');
       doc.rect(margin + tw/2, y, tw/2, 8, 'FD');
       doc.setTextColor(255, 255, 255);
@@ -613,57 +694,10 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     doc.setTextColor(0, 0, 0);
     doc.text("The Chief Overseer", 105, y, { align: 'center' });
     
-    const dataUri = doc.output('datauristring');
-    return dataUri.split(',')[1];
+    return doc.output('blob');
   };
 
-  const generateHTMLTable = () => {
-    const { rubricData, finalScore } = parseRubric(finalReport);
-    if (rubricData.length === 0) return '';
-
-    let rows = rubricData.map(r => `
-      <tr>
-        <td style="border: 1px solid #333; padding: 5px;">${r.category}</td>
-        <td style="border: 1px solid #333; padding: 5px; text-align: center;">${r.score}</td>
-        <td style="border: 1px solid #333; padding: 5px; text-align: center;">${r.weight}</td>
-        <td style="border: 1px solid #333; padding: 5px;">${r.remark}</td>
-      </tr>
-    `).join('');
-
-    return `
-      <table style="width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 12px; margin-top: 20px;">
-        <tr><td colspan="4" style="border: 1px solid #333; padding: 5px; font-weight: bold;">Prepare Data Visualization Leading to Data Analytics Level III</td></tr>
-        <tr><td colspan="4" style="border: 1px solid #333; padding: 5px; font-weight: bold;">Panelist: The Chief Overseer</td></tr>
-        <tr style="background-color: #203764; color: white;">
-          <td colspan="2" style="border: 1px solid #333; padding: 5px; font-weight: bold; text-align: center;">Group number</td>
-          <td colspan="2" style="border: 1px solid #333; padding: 5px; font-weight: bold; text-align: center;">${teamName}</td>
-        </tr>
-        <tr>
-          <td colspan="2" style="border: 1px solid #333; padding: 5px; font-weight: bold;">Names of participants</td>
-          <td colspan="2" style="border: 1px solid #333; padding: 5px;">${selectedPresenters.join(', ')}</td>
-        </tr>
-        <tr>
-          <td colspan="2" style="border: 1px solid #333; padding: 5px; font-weight: bold;">Subject of the summary project</td>
-          <td colspan="2" style="border: 1px solid #333; padding: 5px;">${presentationTopic || 'Live Defense'}</td>
-        </tr>
-        <tr style="background-color: #203764; color: white; text-align: center; font-weight: bold;">
-          <td style="border: 1px solid #333; padding: 5px;">Category</td>
-          <td style="border: 1px solid #333; padding: 5px;">Judge score (0-100)</td>
-          <td style="border: 1px solid #333; padding: 5px;">Percentage weighting</td>
-          <td style="border: 1px solid #333; padding: 5px;">Remarks</td>
-        </tr>
-        ${rows}
-        <tr style="font-weight: bold;">
-          <td style="border: 1px solid #333; padding: 5px;">Final score</td>
-          <td style="border: 1px solid #333; padding: 5px; text-align: center;">${finalScore}%</td>
-          <td style="border: 1px solid #333; padding: 5px; text-align: center;">100%</td>
-          <td style="border: 1px solid #333; padding: 5px;"></td>
-        </tr>
-      </table>
-    `;
-  };
-
-  const handleDownload = (format: string, reportContent: string = finalReport) => {
+  const handleDownload = async (format: string, reportContent: string = finalReport) => {
     if (!reportContent || reportContent.includes('⚠️')) return;
     
     const signatureText = `\n\n========================================\nOFFICIAL SEAL OF THE JUDGE\nSigned,\nThe Chief Overseer`;
@@ -674,28 +708,9 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
       const fullContent = cleanText + signatureText;
       const blob = new Blob([fullContent], { type: 'text/plain' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${filename}.txt`; a.click();
-    } else if (format === 'doc' || format === 'xls') {
-      const htmlTable = generateHTMLTable();
-      const htmlContent = `
-        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-        <head><meta charset='utf-8'></head><body>
-        ${cleanText.replace(/\n/g, '<br>')}
-        ${htmlTable}
-        <br><br><b>OFFICIAL SEAL OF THE JUDGE</b><br><i>Signed,</i><br><h2>The Chief Overseer</h2>
-        </body></html>
-      `;
-      const mime = format === 'doc' ? 'application/msword' : 'application/vnd.ms-excel';
-      const blob = new Blob([htmlContent], { type: mime });
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${filename}.${format}`; a.click();
     } else if (format === 'pdf') {
-      generatePDFBase64(reportContent).then(b64 => {
-        const byteCharacters = atob(b64);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], {type: 'application/pdf'});
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${filename}.pdf`; a.click();
-      });
+      const blob = await generatePDFBlob(reportContent);
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${filename}.pdf`; a.click();
     }
   };
 
@@ -710,62 +725,71 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     await delay(1500); 
     setEmailStatus('generating');
     
-    const pdfBase64 = await generatePDFBase64(finalReport);
-    const boundary = "----=_Part_Nova_System_Boundary";
-    const subject = `[CONFIDENTIAL VERDICT] Final Defense Assessment - ${teamName}`;
-    const to = "dionsondaniel@gmail.com, ehn@healthbio.online";
-    const filename = `${teamName.replace(/\s+/g, '_')}_Defense_Report.pdf`;
-    
-    const emailBody = `The AI Panel has concluded its high-stakes live assessment of ${teamName}'s presentation.
+    const pdfBlob = await generatePDFBlob(finalReport);
+    const reader = new FileReader();
+    reader.readAsDataURL(pdfBlob);
+    reader.onloadend = () => {
+      const base64data = (reader.result as string).split(',')[1];
+      const boundary = "----=_Part_Nova_System_Boundary";
+      const subject = `[CONFIDENTIAL VERDICT] Final Defense Assessment - ${teamName}`;
+      const to = "dionsondaniel@gmail.com, ehn@healthbio.online";
+      const filename = `${teamName.replace(/\s+/g, '_')}_Defense_Report.pdf`;
+      
+      const emailBody = `The AI Panel has concluded its high-stakes live assessment of ${teamName}'s presentation.\n\nPlease find the official PDF dossier attached to reveal the final score and comprehensive evaluation.\n\nAutomated by TTSP Neural Core.\nSecurely routed by: ${loginEmail}`;
 
-We rigorously tested their technical architecture, business logic, and clarity under intense pressure. The final verdict contains critical insights regarding their performance. 
+      const emlContent = `To: ${to}\nSubject: ${subject}\nX-Unsent: 1\nContent-Type: multipart/mixed; boundary="${boundary}"\n\n--${boundary}\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 7bit\n\n${emailBody}\n\n--${boundary}\nContent-Type: application/pdf; name="${filename}"\nContent-Transfer-Encoding: base64\nContent-Disposition: attachment; filename="${filename}"\n\n${base64data.match(/.{1,76}/g)?.join('\n') || base64data}\n--${boundary}--`;
 
-Did they crack under pressure, or did they successfully defend their metrics? The verdict might surprise you.
+      const blob = new Blob([emlContent], { type: 'message/rfc822' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `Draft_Verdict_${teamName.replace(/\s+/g, '_')}.eml`;
+      a.click();
+      setEmailStatus('sent');
+    }
+  };
 
-Please find the official PDF dossier attached to reveal the final score and comprehensive evaluation.
-
-Automated by TTSP Neural Core.
-Securely routed by: ${loginEmail}`;
-
-    const emlContent = `To: ${to}
-Subject: ${subject}
-X-Unsent: 1
-Content-Type: multipart/mixed; boundary="${boundary}"
-
---${boundary}
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 7bit
-
-${emailBody}
-
---${boundary}
-Content-Type: application/pdf; name="${filename}"
-Content-Transfer-Encoding: base64
-Content-Disposition: attachment; filename="${filename}"
-
-${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
---${boundary}--`;
-
-    const blob = new Blob([emlContent], { type: 'message/rfc822' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `Draft_Verdict_${teamName.replace(/\s+/g, '_')}.eml`;
-    a.click();
-
-    await delay(1000);
-    setEmailStatus('sent');
+  const SpinningLoader = () => {
+    // Uses 1.jpg to 12.jpg - Ensure you renamed the images in /public/5TH/
+    const images = Array.from({ length: 12 }, (_, i) => `${i + 1}.jpg`);
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[500] flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur-md">
+        <div className="relative w-64 h-64 animate-[spin_20s_linear_infinite]">
+          {images.map((img, i) => {
+            const angle = (i / images.length) * 2 * Math.PI;
+            return (
+              <div 
+                key={i} 
+                className="absolute w-12 h-12 rounded-lg border-2 border-indigo-500 overflow-hidden shadow-[0_0_15px_rgba(99,102,241,0.5)] bg-slate-800"
+                style={{
+                  top: `calc(50% - ${Math.cos(angle) * 100}px)`,
+                  left: `calc(50% + ${Math.sin(angle) * 100}px)`,
+                  transform: 'translate(-50%, -50%)'
+                }}
+              >
+                <img src={`/5TH/${img}`} alt="loading" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
+              </div>
+            )
+          })}
+          <div className="absolute inset-0 flex items-center justify-center">
+             <Sparkles className="w-10 h-10 text-indigo-400 animate-pulse" />
+          </div>
+        </div>
+        <p className="mt-12 font-black uppercase tracking-widest text-indigo-400 animate-pulse">Syncing Neural Networks...</p>
+      </motion.div>
+    );
   };
 
   const renderQuestionBox = (agentId: AgentId, isActive: boolean) => {
     const config = {
-      eve: { name: 'Techy Eve', icon: Terminal, color: 'text-cyan-400', border: 'border-cyan-500/30', bg: 'bg-cyan-500', textColors: 'text-cyan-50', placeholder: 'Technical explanation...' },
-      zeus: { name: 'CEO Zeus', icon: Briefcase, color: 'text-amber-400', border: 'border-amber-500/30', bg: 'bg-amber-500', textColors: 'text-amber-50', placeholder: 'Business answer...' },
-      alto: { name: 'Alto', icon: HelpCircle, color: 'text-emerald-400', border: 'border-emerald-500/30', bg: 'bg-emerald-500', textColors: 'text-emerald-50', placeholder: 'Simple summary...' },
-      leo: { name: 'Data Leo', icon: BarChart3, color: 'text-purple-400', border: 'border-purple-500/30', bg: 'bg-purple-500', textColors: 'text-purple-50', placeholder: 'Analytical methodology...' },
-      max: { name: 'QA Max', icon: ShieldCheck, color: 'text-rose-400', border: 'border-rose-500/30', bg: 'bg-rose-500', textColors: 'text-rose-50', placeholder: 'Validation steps...' }
+      eve: { name: 'Techy Eve', icon: Terminal, color: 'text-cyan-400', border: 'border-cyan-500/30', bg: 'bg-cyan-500', textColors: 'text-cyan-50', placeholder: 'Speak or type technical explanation...' },
+      zeus: { name: 'CEO Zeus', icon: Briefcase, color: 'text-amber-400', border: 'border-amber-500/30', bg: 'bg-amber-500', textColors: 'text-amber-50', placeholder: 'Speak or type business answer...' },
+      alto: { name: 'Alto', icon: HelpCircle, color: 'text-emerald-400', border: 'border-emerald-500/30', bg: 'bg-emerald-500', textColors: 'text-emerald-50', placeholder: 'Speak or type summary...' },
+      leo: { name: 'Data Leo', icon: BarChart3, color: 'text-purple-400', border: 'border-purple-500/30', bg: 'bg-purple-500', textColors: 'text-purple-50', placeholder: 'Speak or type analytical methodology...' },
+      max: { name: 'QA Max', icon: ShieldCheck, color: 'text-rose-400', border: 'border-rose-500/30', bg: 'bg-rose-500', textColors: 'text-rose-50', placeholder: 'Speak or type validation steps...' }
     }[agentId];
     
     const Icon = config.icon;
+    const listeningActive = isListening === agentId;
 
     return (
       <motion.div 
@@ -782,14 +806,24 @@ ${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
         </p>
         
         {isActive ? (
-          <textarea 
-            value={answers[agentId]} 
-            onChange={e => setAnswers({...answers, [agentId]: e.target.value})} 
-            rows={3} 
-            className={`w-full bg-slate-900 border ${config.border} ${config.textColors} font-medium text-xs md:text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-white/50 transition-colors`} 
-            placeholder={config.placeholder} 
-            autoFocus
-          />
+          <div className="relative">
+            <textarea 
+              value={answers[agentId]} 
+              onChange={e => setAnswers({...answers, [agentId]: e.target.value})} 
+              rows={4} 
+              className={`w-full bg-slate-900 border ${config.border} ${config.textColors} font-medium text-xs md:text-sm rounded-xl px-4 py-3 pr-12 focus:outline-none focus:border-white/50 transition-colors`} 
+              placeholder={config.placeholder} 
+              autoFocus
+            />
+            <div className="absolute right-3 bottom-4 flex flex-col gap-2">
+              <button onClick={() => toggleSpeechRecognition(agentId)} className={`p-2 rounded-full transition-all ${listeningActive ? 'bg-rose-500 text-white animate-pulse shadow-[0_0_15px_rgba(244,63,94,0.5)]' : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'}`}>
+                 <Mic className="w-4 h-4" />
+              </button>
+              <button onClick={() => { if(isListening) toggleSpeechRecognition(agentId); }} className={`p-2 rounded-full transition-all ${!listeningActive ? 'bg-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'}`}>
+                 <Keyboard className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         ) : (
           <div className="w-full bg-slate-900/50 border border-slate-700/50 text-slate-300 text-xs md:text-sm rounded-xl px-4 py-3 italic">
             <span className="text-[10px] uppercase font-bold text-slate-500 tracking-widest block mb-1">Your Answer:</span>
@@ -822,8 +856,8 @@ ${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
 
   const stepsData =[
     { step: "1. Team Setup", desc: "Select members & presenters.", icon: Users, color: "text-blue-400" },
-    { step: "2. Present (15m)", desc: "Strict timer for your pitch.", icon: Clock, color: "text-emerald-400" },
-    { step: "3. AI Defense (10m)", desc: "Upload PDF & Face 5 Panelists.", icon: ShieldCheck, color: "text-rose-400" }
+    { step: "2. Presentation (15mins.)", desc: "Strict timer for your pitch.", icon: Clock, color: "text-emerald-400" },
+    { step: "3. AI Defense (10mins)", desc: "Upload PDF & Face 5 Panelists.", icon: ShieldCheck, color: "text-rose-400" }
   ];
 
   return (
@@ -842,6 +876,8 @@ ${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
           exit={{ opacity: 0, scale: 0.9, y: 50 }}
           className="w-full max-w-7xl h-full md:h-[95vh] bg-slate-900 border border-slate-700 shadow-[0_0_100px_rgba(99,102,241,0.2)] md:rounded-[2.5rem] overflow-hidden flex flex-col relative"
         >
+          {isProcessing && <SpinningLoader />}
+
           {/* HEADER */}
           <div className="h-16 md:h-20 border-b border-slate-800 px-4 md:px-6 flex items-center justify-between bg-slate-950 z-20 shrink-0 relative">
             <div className="flex items-center gap-3 md:gap-4 flex-1">
@@ -1034,11 +1070,21 @@ ${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
                         </div>
                         <div className="md:col-span-2">
                           <label className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Group Number/Team Name</label>
-                          <input 
-                            type="text" value={teamName} onChange={e => setTeamName(e.target.value)} 
-                            className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-xl px-4 py-3 focus:border-indigo-500 outline-none" 
-                            placeholder="e.g., Jack Daniel Team" 
-                          />
+                          {selectedCohort === '5TH' ? (
+                            <select 
+                              value={teamName} onChange={handleTeamSelection} 
+                              className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-xl px-4 py-3 focus:border-indigo-500 outline-none"
+                            >
+                              <option value="">Select a 5TH Cohort Team</option>
+                              {Object.keys(TEAMS_5TH).map(t => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                          ) : (
+                            <input 
+                              type="text" value={teamName} onChange={e => setTeamName(e.target.value)} 
+                              className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-xl px-4 py-3 focus:border-indigo-500 outline-none" 
+                              placeholder="e.g., Jack Daniel Team" 
+                            />
+                          )}
                         </div>
                       </div>
 
@@ -1104,7 +1150,7 @@ ${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
                         disabled={isProcessing || !teamName || (!presentationTopic && !uploadedFile) || !hasPresented}
                         className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-black rounded-xl uppercase tracking-widest text-xs md:text-sm transition-colors flex items-center justify-center gap-3"
                       >
-                        {isProcessing ? <><Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" /> Nexus Validating Attendance & Syncing AI...</> : "Start Defense (10m Limit)"}
+                        Start Defense (10m Limit)
                       </button>
                     </div>
                   </div>
@@ -1277,7 +1323,7 @@ ${pdfBase64.match(/.{1,76}/g)?.join('\n') || pdfBase64}
                     </div>
                   </div>
 
-                  {/* RESTORED: DIRECT EMAIL SEND WITH FAKE SECURE AUTH */}
+                  {/* DIRECT EMAIL SEND WITH FAKE SECURE AUTH */}
                   <div className="bg-rose-500/10 border border-rose-500/30 p-6 md:p-8 rounded-2xl md:rounded-3xl text-center space-y-5 md:space-y-6">
                     <Mail className="w-10 h-10 md:w-12 md:h-12 text-rose-400 mx-auto" />
                     <div>

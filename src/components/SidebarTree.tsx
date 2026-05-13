@@ -46,7 +46,7 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({
       setIsUnlocked(false);
     } else {
       const pass = prompt("Enter password to unlock hidden tabs:");
-      if (pass === "Elite7") {
+      if (pass === "LED") {
         setIsUnlocked(true);
       } else if (pass !== null) {
         alert("Incorrect password");
