@@ -38,7 +38,7 @@ const MODULE_OPTIONS = [
 ];
 
 const TEAMS_5TH: Record<string, string[]> = {
-  "Team Fusion": ["Ariel Samar", "Cherryday Derecho", "Jean Marrie Dapal", "Gerald Dacoron", "Wilberto Jr. Bitonga"],
+  "Team Fusion": ["Ariel Samar", "Cherryday Derecho", "Jean Marrie Dapal", "Gerald Dacoron", "Wilberto Bitonga Jr."],
   "Team Sheetheads": ["Jomarey Aresco", "Varick Sy", "Euniel Bayato", "Peegee Pearl Bordaje"],
   "Team Intercellar": ["Roselle Rabanes", "Clifford Villamor", "Jessel Christma Nudalo", "Garry Villasencio"],
   "Team Curious City": ["Methoe Shela Calan", "Jesah Carla Coloyan", "Christian Singco", "Dennis Claros"]
