@@ -38,7 +38,7 @@ const MODULE_OPTIONS =[
 ];
 
 const TEAMS_5TH: Record<string, string[]> = {
-  "Team Fusion": ["Ariel Samar", "Cherryday Derecho", "Jean Marrie Dapal", "Gerald Dacoron", "Wilberto Bitonga Jr."],
+  "Team Fusion": ["Ariel Samar", "Cherryday Derecho", "Jean Marrie Dapal", "Gerald Dacoron", "Wilberto Jr. Bitonga"],
   "Team Sheetheads": ["Jomarey Aresco", "Varick Sy", "Euniel Bayato", "Peegee Pearl Bordaje"],
   "Team Intercellar": ["Roselle Rabanes", "Clifford Villamor", "Jessel Christma Nudalo", "Garry Villasencio"],
   "Team Curious City": ["Methoe Shela Calan", "Jesah Carla Coloyan", "Christian Singco", "Dennis Claros"]
@@ -57,9 +57,11 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [activeModel, setActiveModel] = useState<string>('gemini-3-flash-preview');
 
+  // AUDIO & INTRO SEQUENCE STATES
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [introSequence, setIntroSequence] = useState(0);
 
+  // TEAM / MEMBER STATES
   const [teamName, setTeamName] = useState('');
   const [selectedCohort, setSelectedCohort] = useState('5TH');
   const [selectedPresenters, setSelectedPresenters] = useState<string[]>([]);
@@ -84,6 +86,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
   const [loginPassword, setLoginPassword] = useState('');
   const [loggedInUser, setLoggedInUser] = useState('');
 
+  // TIMER STATES
   const [hasPresented, setHasPresented] = useState(false);
   const [showPresentationTimer, setShowPresentationTimer] = useState(false);
   const [presentationTimeLeft, setPresentationTimeLeft] = useState(15 * 60); 
@@ -91,9 +94,12 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
   const [isQnaActive, setIsQnaActive] = useState(false);
   const [isTimedOut, setIsTimedOut] = useState(false);
 
+  // SPEECH RECOGNITION STATE
   const [isListening, setIsListening] = useState<AgentId | null>(null);
+  const [speechLang, setSpeechLang] = useState<string>('en-PH'); 
   const recognitionRef = useRef<any>(null);
 
+  // Derived Cohorts and Learners
   const availableCohorts = useMemo(() => Array.from(new Set(learners.map(l => l.COHORT_NO).filter(Boolean))), [learners]);
   const filteredLearners = useMemo(() => learners.filter(l => l.COHORT_NO === selectedCohort), [learners, selectedCohort]);
 
@@ -409,6 +415,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
+      recognition.lang = speechLang; 
       
       let finalTranscript = answers[agentId] || '';
       
@@ -519,10 +526,10 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     setActiveSpeaker('Nova');
     
     if (!report.includes('⚠️')) {
-      // 1) Trigger Auto Download
+      // Trigger Auto Download
       handleDownload('pdf', report);
       
-      // 2) Auto Upload to Supabase bucket
+      // Auto Upload to Supabase bucket
       const pdfBlob = await generatePDFBlob(report);
       const filename = `${teamName.replace(/\s+/g, '_')}_Defense_Report.pdf`;
       if (supabaseUrl) {
@@ -697,6 +704,52 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     return doc.output('blob');
   };
 
+  const generateHTMLTable = () => {
+    const { rubricData, finalScore } = parseRubric(finalReport);
+    if (rubricData.length === 0) return '';
+
+    let rows = rubricData.map(r => `
+      <tr>
+        <td style="border: 1px solid #333; padding: 5px;">${r.category}</td>
+        <td style="border: 1px solid #333; padding: 5px; text-align: center;">${r.score}</td>
+        <td style="border: 1px solid #333; padding: 5px; text-align: center;">${r.weight}</td>
+        <td style="border: 1px solid #333; padding: 5px;">${r.remark}</td>
+      </tr>
+    `).join('');
+
+    return `
+      <table style="width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 12px; margin-top: 20px;">
+        <tr><td colspan="4" style="border: 1px solid #333; padding: 5px; font-weight: bold;">Prepare Data Visualization Leading to Data Analytics Level III</td></tr>
+        <tr><td colspan="4" style="border: 1px solid #333; padding: 5px; font-weight: bold;">Panelist: The Chief Overseer</td></tr>
+        <tr style="background-color: #203764; color: white;">
+          <td colspan="2" style="border: 1px solid #333; padding: 5px; font-weight: bold; text-align: center;">Group number</td>
+          <td colspan="2" style="border: 1px solid #333; padding: 5px; font-weight: bold; text-align: center;">${teamName}</td>
+        </tr>
+        <tr>
+          <td colspan="2" style="border: 1px solid #333; padding: 5px; font-weight: bold;">Names of participants</td>
+          <td colspan="2" style="border: 1px solid #333; padding: 5px;">${selectedPresenters.join(', ')}</td>
+        </tr>
+        <tr>
+          <td colspan="2" style="border: 1px solid #333; padding: 5px; font-weight: bold;">Subject of the summary project</td>
+          <td colspan="2" style="border: 1px solid #333; padding: 5px;">${presentationTopic || 'Live Defense'}</td>
+        </tr>
+        <tr style="background-color: #203764; color: white; text-align: center; font-weight: bold;">
+          <td style="border: 1px solid #333; padding: 5px;">Category</td>
+          <td style="border: 1px solid #333; padding: 5px;">Judge score (0-100)</td>
+          <td style="border: 1px solid #333; padding: 5px;">Percentage weighting</td>
+          <td style="border: 1px solid #333; padding: 5px;">Remarks</td>
+        </tr>
+        ${rows}
+        <tr style="font-weight: bold;">
+          <td style="border: 1px solid #333; padding: 5px;">Final score</td>
+          <td style="border: 1px solid #333; padding: 5px; text-align: center;">${finalScore}%</td>
+          <td style="border: 1px solid #333; padding: 5px; text-align: center;">100%</td>
+          <td style="border: 1px solid #333; padding: 5px;"></td>
+        </tr>
+      </table>
+    `;
+  };
+
   const handleDownload = async (format: string, reportContent: string = finalReport) => {
     if (!reportContent || reportContent.includes('⚠️')) return;
     
@@ -708,6 +761,19 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
       const fullContent = cleanText + signatureText;
       const blob = new Blob([fullContent], { type: 'text/plain' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${filename}.txt`; a.click();
+    } else if (format === 'doc' || format === 'xls') {
+      const htmlTable = generateHTMLTable();
+      const htmlContent = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+        <head><meta charset='utf-8'></head><body>
+        ${cleanText.replace(/\n/g, '<br>')}
+        ${htmlTable}
+        <br><br><b>OFFICIAL SEAL OF THE JUDGE</b><br><i>Signed,</i><br><h2>The Chief Overseer</h2>
+        </body></html>
+      `;
+      const mime = format === 'doc' ? 'application/msword' : 'application/vnd.ms-excel';
+      const blob = new Blob([htmlContent], { type: mime });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${filename}.${format}`; a.click();
     } else if (format === 'pdf') {
       const blob = await generatePDFBlob(reportContent);
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${filename}.pdf`; a.click();
@@ -749,7 +815,6 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
   };
 
   const SpinningLoader = () => {
-    // Uses 1.jpg to 12.jpg - Ensure you renamed the images in /public/5TH/
     const images = Array.from({ length: 12 }, (_, i) => `${i + 1}.jpg`);
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[500] flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur-md">
@@ -815,11 +880,27 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
               placeholder={config.placeholder} 
               autoFocus
             />
-            <div className="absolute right-3 bottom-4 flex flex-col gap-2">
-              <button onClick={() => toggleSpeechRecognition(agentId)} className={`p-2 rounded-full transition-all ${listeningActive ? 'bg-rose-500 text-white animate-pulse shadow-[0_0_15px_rgba(244,63,94,0.5)]' : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'}`}>
+            <div className="absolute right-3 bottom-3 flex flex-col gap-2 w-9 items-center">
+              <select 
+                title="Voice Language"
+                value={speechLang}
+                onChange={(e) => {
+                  setSpeechLang(e.target.value);
+                  if (isListening === agentId) {
+                    recognitionRef.current?.stop();
+                    setIsListening(null);
+                  }
+                }}
+                className="w-full bg-slate-800 text-slate-300 text-[8px] font-bold uppercase rounded p-1 outline-none border border-slate-600 appearance-none text-center cursor-pointer hover:border-indigo-400 transition-colors"
+              >
+                <option value="en-PH">EN</option>
+                <option value="fil-PH">TAG</option>
+                <option value="ceb-PH">BIS</option>
+              </select>
+              <button onClick={() => toggleSpeechRecognition(agentId)} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${listeningActive ? 'bg-rose-500 text-white animate-pulse shadow-[0_0_15px_rgba(244,63,94,0.5)]' : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'}`}>
                  <Mic className="w-4 h-4" />
               </button>
-              <button onClick={() => { if(isListening) toggleSpeechRecognition(agentId); }} className={`p-2 rounded-full transition-all ${!listeningActive ? 'bg-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'}`}>
+              <button onClick={() => { if(isListening) { recognitionRef.current?.stop(); setIsListening(null); } }} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${!listeningActive ? 'bg-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'}`}>
                  <Keyboard className="w-4 h-4" />
               </button>
             </div>
