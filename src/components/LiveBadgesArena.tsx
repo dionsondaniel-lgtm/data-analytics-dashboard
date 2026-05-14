@@ -140,6 +140,7 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
           const { data: files } = await supabase.storage.from('verdicts').list();
           
           if (files && files.length > 0) {
+            // STRICTLY exclude '.emptyFolderPlaceholder' and other hidden files
             const todayFiles = files.filter(f => 
               f.created_at && 
               f.created_at >= today && 
@@ -151,7 +152,7 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
             const uniqueTeams = Array.from(new Set(extractedNames)).filter(name => name.length > 0 && name !== 'Unknown Team');
 
             const { data: existingDb } = await supabase.from('teams').select('id, team_name');
-            let updatedDbTeams = existingDb ||[];
+            let updatedDbTeams = existingDb || [];
 
             for (const tName of uniqueTeams) {
               let teamInfo = updatedDbTeams.find(t => t.team_name.toLowerCase() === tName.toLowerCase());
@@ -214,7 +215,7 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
     if (showVoteModal && voteAlias) {
       fetchUserPastVotes(voteAlias);
     }
-  },[showVoteModal, voteAlias]);
+  }, [showVoteModal, voteAlias]);
 
   // AUDIENCE VOTING TIMER LOGIC
   useEffect(() => {
@@ -300,7 +301,7 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
         teamTotalTally[tName] = (teamTotalTally[tName] || 0) + 1;
       });
 
-      const newResults =[];
+      const newResults = [];
       for (const badge of BADGES) {
         const badgeTally = tally[badge.name];
         if (badgeTally) {
@@ -319,8 +320,7 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
 
       const rankings = Object.entries(teamTotalTally)
         .map(([team, votes]) => ({ team, votes }))
-        .sort((a, b) => b.votes - a.votes)
-        .slice(0, 5);
+        .sort((a, b) => b.votes - a.votes);
       setTeamRankings(rankings);
 
     } catch (err) {}
@@ -457,11 +457,16 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
 
   const handleGrandAnnounce = async () => {
     let speech = "Attention everyone! The votes are in. It is time to announce the official Grand Results and crown our champions! ";
+    
     if (teamRankings.length > 0) {
       speech += `The overall grand champion is ${teamRankings[0].team} with ${teamRankings[0].votes} points. `;
-      if (teamRankings.length > 1) speech += `In second place, ${teamRankings[1].team} with ${teamRankings[1].votes} points. `;
-      if (teamRankings.length > 2) speech += `And in third place, ${teamRankings[2].team}. `;
+      for (let i = 1; i < teamRankings.length; i++) {
+         speech += `In rank ${i + 1}, we have ${teamRankings[i].team} with ${teamRankings[i].votes} points. `;
+      }
     }
+
+    speech += "Before we close, I want to extend a massive thank you to everyone. Thank you to our esteemed AI Panel: Techy Eve, CEO Zeus, Alto, Data Leo, Q A Max, and The Judge. A very special thanks to Mentor Ehn for orchestrating this, and to the brilliant learners of the 5th Cohort for your hard work. And finally, to our amazing audience in the live feed—thank you for your time and for casting your votes. We are truly grateful to have met you all here today. This concludes our broadcast. Have a wonderful day!";
+
     speak(speech);
     setShowGrandResults(true);
 
@@ -529,7 +534,6 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
     setSelectedVaultFiles(prev => prev.includes(filename) ? prev.filter(f => f !== filename) : [...prev, filename]);
   };
 
-  // Helper Delay for bulk download
   const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
   const handleVaultDownload = async () => {
@@ -545,7 +549,7 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
         a.click();
         window.URL.revokeObjectURL(url);
       }
-      await delay(300); // Prevent browser blocking multiple downloads
+      await delay(300); 
     }
     setSelectedVaultFiles([]);
   };
@@ -553,36 +557,48 @@ export const LiveBadgesArena: React.FC<LiveBadgesArenaProps> = ({ onClose }) => 
   const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const maxRankVotes = teamRankings.length > 0 ? teamRankings[0].votes : 1;
 
-  // Spinning Images Loading Component
+  // Ferris Wheel Smooth Spinning Loader Component
   const SpinningLoader = () => {
     const images = Array.from({ length: 12 }, (_, i) => `${i + 1}.jpg`); 
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-[500] flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur-md">
-        <div className="relative w-64 h-64 animate-[spin_20s_linear_infinite]">
+        
+        {/* Parent container rotates 360 over 30s */}
+        <motion.div 
+          animate={{ rotate: 360 }} 
+          transition={{ duration: 30, ease: "linear", repeat: Infinity }}
+          className="relative w-64 h-64"
+        >
           {images.map((img, i) => {
             const angle = (i / images.length) * 2 * Math.PI;
+            // Radius of 120px from center
+            const x = Math.cos(angle) * 120;
+            const y = Math.sin(angle) * 120;
+            
             return (
-              <div 
+              <motion.div 
                 key={i} 
-                className="absolute w-12 h-12 rounded-lg border-2 border-pink-500 overflow-hidden shadow-[0_0_15px_rgba(244,114,182,0.5)] bg-slate-800"
+                animate={{ rotate: -360 }} // Counter rotate so child stays upright
+                transition={{ duration: 30, ease: "linear", repeat: Infinity }}
+                className="absolute w-14 h-14 rounded-xl border-2 border-pink-500 overflow-hidden shadow-[0_0_15px_rgba(244,114,182,0.5)] bg-slate-800 flex items-center justify-center"
                 style={{
-                  top: `calc(50% - ${Math.cos(angle) * 100}px)`,
-                  left: `calc(50% + ${Math.sin(angle) * 100}px)`,
-                  transform: 'translate(-50%, -50%)'
+                  top: `calc(50% + ${y}px - 28px)`,
+                  left: `calc(50% + ${x}px - 28px)`,
                 }}
               >
                 <img src={`/5TH/${img}`} alt="loading" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
-              </div>
+              </motion.div>
             )
           })}
           <div className="absolute inset-0 flex items-center justify-center">
-             <Sparkles className="w-10 h-10 text-pink-400 animate-pulse" />
+             <Sparkles className="w-12 h-12 text-pink-400 animate-pulse" />
           </div>
-        </div>
+        </motion.div>
+
         {isVotingActive ? (
-           <p className="mt-12 font-black uppercase tracking-widest text-pink-400 animate-pulse text-4xl font-mono">{formatTime(votingTimeLeft)}</p>
+           <p className="mt-16 font-black uppercase tracking-widest text-pink-400 animate-pulse text-5xl font-mono drop-shadow-lg">{formatTime(votingTimeLeft)}</p>
         ) : (
-           <p className="mt-12 font-black uppercase tracking-widest text-pink-400 animate-pulse">Syncing Leaderboard...</p>
+           <p className="mt-16 font-black uppercase tracking-widest text-pink-400 animate-pulse">Syncing Leaderboard...</p>
         )}
       </motion.div>
     );
