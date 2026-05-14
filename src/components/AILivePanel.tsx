@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@supabase/supabase-js';
-import { 
-  X, UploadCloud, File as FileIcon, Play, Terminal, Briefcase, HelpCircle, 
-  Gavel, Mail, Sparkles, Loader2, Download, Table, BarChart3, Code2, Database, 
-  ShieldCheck, Lock, CheckCircle2, UserCircle, Info, FileText, RefreshCw, 
+import {
+  X, UploadCloud, File as FileIcon, Play, Terminal, Briefcase, HelpCircle,
+  Gavel, Mail, Sparkles, Loader2, Download, Table, BarChart3, Code2, Database,
+  ShieldCheck, Lock, CheckCircle2, UserCircle, Info, FileText, RefreshCw,
   ArrowRight, Award, Users, Clock, Timer, AlertTriangle, Volume2, VolumeX, Mic, Keyboard
 } from 'lucide-react';
 import { Learner } from '../types';
@@ -30,7 +30,7 @@ const PANELISTS = [
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-const MODULE_OPTIONS =[
+const MODULE_OPTIONS = [
   { id: 'SQL', label: 'SQL Architecture', icon: Database },
   { id: 'Excel', label: 'Advanced Excel', icon: Table },
   { id: 'PowerBI', label: 'Power BI Dashboarding', icon: BarChart3 },
@@ -52,7 +52,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeSpeaker, setActiveSpeaker] = useState<string | null>('Aura');
   const [showHowItWorks, setShowHowItWorks] = useState(false);
-  
+
   const [showBadgesArena, setShowBadgesArena] = useState(false);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [activeModel, setActiveModel] = useState<string>('gemini-3-flash-preview');
@@ -77,9 +77,9 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
   const [answers, setAnswers] = useState<Record<AgentId, string>>({ eve: '', zeus: '', alto: '', leo: '', max: '' });
   const [qnaOrder, setQnaOrder] = useState<AgentId[]>([]);
   const [currentQIndex, setCurrentQIndex] = useState(0);
-  
+
   const [finalReport, setFinalReport] = useState<string>('');
-  
+
   const [emailStatus, setEmailStatus] = useState<'idle' | 'auth' | 'generating' | 'sent'>('idle');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
@@ -89,14 +89,14 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
   // TIMER STATES
   const [hasPresented, setHasPresented] = useState(false);
   const [showPresentationTimer, setShowPresentationTimer] = useState(false);
-  const [presentationTimeLeft, setPresentationTimeLeft] = useState(15 * 60); 
-  const [qnaTimeLeft, setQnaTimeLeft] = useState(10 * 60); 
+  const [presentationTimeLeft, setPresentationTimeLeft] = useState(15 * 60);
+  const [qnaTimeLeft, setQnaTimeLeft] = useState(10 * 60);
   const [isQnaActive, setIsQnaActive] = useState(false);
   const [isTimedOut, setIsTimedOut] = useState(false);
 
   // SPEECH RECOGNITION STATE
   const [isListening, setIsListening] = useState<AgentId | null>(null);
-  const [speechLang, setSpeechLang] = useState<string>('en-PH'); 
+  const [speechLang, setSpeechLang] = useState<string>('en-PH');
   const recognitionRef = useRef<any>(null);
 
   // Derived Cohorts and Learners
@@ -133,7 +133,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
         if (data.models) {
           const names = data.models
             .map((m: any) => m.name.replace('models/', ''))
-            .filter((n: string) => n.includes('gemini') && !n.includes('embedding') && !n.includes('vision')); 
+            .filter((n: string) => n.includes('gemini') && !n.includes('embedding') && !n.includes('vision'));
           setAvailableModels(names);
         }
       } catch (e) {
@@ -187,39 +187,39 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
 
   useEffect(() => {
     if (!isOpen || stage !== 'intro') {
-       window.speechSynthesis?.cancel();
-       return;
+      window.speechSynthesis?.cancel();
+      return;
     }
 
     let timeoutId: NodeJS.Timeout;
     const playStep = (text: string, nextStep: number, delayMs: number) => {
-       if (!soundEnabled || !('speechSynthesis' in window)) {
-           timeoutId = setTimeout(() => setIntroSequence(nextStep), delayMs);
-           return;
-       }
-       window.speechSynthesis.cancel();
-       const utterance = new SpeechSynthesisUtterance(text);
-       utterance.rate = 1.0;
-       utterance.pitch = 1.2; 
-       const voices = window.speechSynthesis.getVoices();
-       const femaleVoice = voices.find(v => v.name.includes('Female') || v.name.includes('Samantha') || v.name.includes('Zira'));
-       if (femaleVoice) utterance.voice = femaleVoice;
+      if (!soundEnabled || !('speechSynthesis' in window)) {
+        timeoutId = setTimeout(() => setIntroSequence(nextStep), delayMs);
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.0;
+      utterance.pitch = 1.2;
+      const voices = window.speechSynthesis.getVoices();
+      const femaleVoice = voices.find(v => v.name.includes('Female') || v.name.includes('Samantha') || v.name.includes('Zira'));
+      if (femaleVoice) utterance.voice = femaleVoice;
 
-       utterance.onend = () => setIntroSequence(nextStep);
-       timeoutId = setTimeout(() => setIntroSequence(prev => prev < nextStep ? nextStep : prev), delayMs + 3000); 
-       window.speechSynthesis.speak(utterance);
+      utterance.onend = () => setIntroSequence(nextStep);
+      timeoutId = setTimeout(() => setIntroSequence(prev => prev < nextStep ? nextStep : prev), delayMs + 3000);
+      window.speechSynthesis.speak(utterance);
     }
 
     if (introSequence === 1) {
-        playStep("Welcome to the Live Defense. Please follow the sequence carefully.", 2, 3000);
+      playStep("Welcome to the Live Defense. Please follow the sequence carefully.", 2, 3000);
     } else if (introSequence === 2) {
-        playStep("Step 1. Team Setup. Select your members and presenters from the cohort.", 3, 3500);
+      playStep("Step 1. Team Setup. Select your members and presenters from the cohort.", 3, 3500);
     } else if (introSequence === 3) {
-        playStep("Step 2. Presentation. You will have a strict fifteen minute timer for your pitch.", 4, 4000);
+      playStep("Step 2. Presentation. You will have a strict fifteen minute timer for your pitch.", 4, 4000);
     } else if (introSequence === 4) {
-        playStep("Step 3. A I Defense. Upload your P D F and face the five Panelists.", 5, 4000);
+      playStep("Step 3. A I Defense. Upload your P D F and face the five Panelists.", 5, 4000);
     } else if (introSequence === 5) {
-        playStep("Finally, introducing Gemma! After your grueling defense, Gemma will host the Live Badges Arena. The audience can vote for awards before The Judge delivers the final verdict.", 6, 9000);
+      playStep("Finally, introducing Gemma! After your grueling defense, Gemma will host the Live Badges Arena. The audience can vote for awards before The Judge delivers the final verdict.", 6, 9000);
     }
 
     return () => clearTimeout(timeoutId);
@@ -254,7 +254,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
   const finishPresentation = () => {
     setShowPresentationTimer(false);
     setHasPresented(true);
-    setPresentationTimeLeft(15 * 60); 
+    setPresentationTimeLeft(15 * 60);
   };
 
   const formatTime = (seconds: number) => {
@@ -287,13 +287,13 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
   const callAI = async (prompt: string, speakerId: string, includeFile: boolean = false): Promise<string> => {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return "⚠️ API Key missing.";
-    
+
     setActiveSpeaker(speakerId);
     let responseText = "";
 
     const parts: any[] = [{ text: prompt }];
     const validMimeTypes = ['application/pdf', 'text/plain', 'text/csv', 'image/jpeg', 'image/png', 'image/webp'];
-    
+
     if (includeFile && fileBase64 && validMimeTypes.includes(fileBase64.mimeType)) {
       parts.push({ inlineData: { data: fileBase64.data, mimeType: fileBase64.mimeType } });
     }
@@ -312,10 +312,10 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: 0.3 } })
           });
-          
+
           if (!res.ok) {
-            if (res.status === 429) break; 
-            if (res.status === 503 && attempt === 0) { await delay(1500); attempt++; continue; } 
+            if (res.status === 429) break;
+            if (res.status === 503 && attempt === 0) { await delay(1500); attempt++; continue; }
             break;
           }
 
@@ -337,15 +337,15 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
   const processPresentation = async () => {
     if (!teamName || (!presentationTopic && !uploadedFile)) return;
     setIsProcessing(true);
-    
+
     setActiveSpeaker('Nexus');
-    await delay(1500); 
+    await delay(1500);
     setActiveSpeaker('System');
 
-    const diffGuide = 
+    const diffGuide =
       difficulty === 'Easy' ? "Keep questions very simple, basic, and encouraging. Avoid complex queries." :
-      difficulty === 'Intermediate' ? "Ask standard, thought-provoking questions that require a good understanding of the topic." :
-      "Be ruthless, highly technical, and critical. Ask complex edge-cases and pinpoint theoretical flaws.";
+        difficulty === 'Intermediate' ? "Ask standard, thought-provoking questions that require a good understanding of the topic." :
+          "Be ruthless, highly technical, and critical. Ask complex edge-cases and pinpoint theoretical flaws.";
 
     const prompt = `You are generating 5 distinct questions for a live ${selectedModule} presentation defense.
     Group/Team: ${teamName}
@@ -362,13 +362,13 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     
     Return EXACTLY a raw JSON object with keys "eve", "zeus", "alto", "leo", and "max". Do not use markdown wrappers.`;
 
-    const response = await callAI(prompt, 'Panel', true); 
-    
+    const response = await callAI(prompt, 'Panel', true);
+
     try {
       if (response.includes("⚠️ Neural failure")) throw new Error("API Chain Failed.");
       const match = response.match(/\{[\s\S]*\}/);
       if (!match) throw new Error("No JSON structure found.");
-      
+
       const parsed = JSON.parse(match[0]);
       setGeneratedQuestions({
         eve: parsed.eve || `How did you use ${selectedModule} technically here?`,
@@ -389,7 +389,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
 
     const agents: AgentId[] = ['eve', 'zeus', 'alto', 'leo', 'max'];
     const shuffled = [...agents].sort(() => Math.random() - 0.5);
-    
+
     setQnaOrder(shuffled);
     setCurrentQIndex(0);
     setStage('qna');
@@ -409,16 +409,16 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
       if (!SpeechRecognition) {
         return alert("Speech Recognition is not supported in this browser. Please use Chrome.");
       }
-      
+
       if (recognitionRef.current) recognitionRef.current.stop();
 
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = speechLang; 
-      
+      recognition.lang = speechLang;
+
       let finalTranscript = answers[agentId] || '';
-      
+
       recognition.onresult = (event: any) => {
         let interimTranscript = '';
         for (let i = event.resultIndex; i < event.results.length; ++i) {
@@ -430,10 +430,10 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
         }
         setAnswers(prev => ({ ...prev, [agentId]: finalTranscript + interimTranscript }));
       };
-      
+
       recognition.onerror = () => setIsListening(null);
       recognition.onend = () => setIsListening(null);
-      
+
       recognitionRef.current = recognition;
       recognition.start();
       setIsListening(agentId);
@@ -443,7 +443,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
   const handleNextQuestion = () => {
     const activeAgent = qnaOrder[currentQIndex];
     if (!answers[activeAgent]) return;
-    
+
     if (isListening) {
       if (recognitionRef.current) recognitionRef.current.stop();
       setIsListening(null);
@@ -455,7 +455,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
       const nextAgent = qnaOrder[nextIndex];
       setActiveSpeaker(nextAgent.charAt(0).toUpperCase() + nextAgent.slice(1));
     } else {
-      setIsQnaActive(false); 
+      setIsQnaActive(false);
       submitAnswersAndGrade(true, false);
     }
   };
@@ -475,8 +475,8 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     setActiveSpeaker('System');
 
     const currentDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    const timeoutNote = forceTimeout 
-      ? `\n\nCRITICAL NOTE: THE PRESENTER RAN OUT OF TIME! The 10-minute limit expired before they could answer all questions. You MUST penalize their grade for poor time management.` 
+    const timeoutNote = forceTimeout
+      ? `\n\nCRITICAL NOTE: THE PRESENTER RAN OUT OF TIME! The 10-minute limit expired before they could answer all questions. You MUST penalize their grade for poor time management.`
       : "";
 
     const prompt = `You are evaluating a live ${selectedModule} data presentation defense (${difficulty} Mode).
@@ -524,44 +524,44 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     setStage('grading');
     setIsProcessing(false);
     setActiveSpeaker('Nova');
-    
+
     if (!report.includes('⚠️')) {
       // Trigger Auto Download
       handleDownload('pdf', report);
-      
+
       // Auto Upload to Supabase bucket
       const pdfBlob = await generatePDFBlob(report);
       const filename = `${teamName.replace(/\s+/g, '_')}_Defense_Report.pdf`;
       if (supabaseUrl) {
-         try {
-           await supabase.storage.from('verdicts').upload(`${filename}`, pdfBlob, { upsert: true });
-         } catch (e) {
-           console.error("Auto-bucket save failed", e);
-         }
+        try {
+          await supabase.storage.from('verdicts').upload(`${filename}`, pdfBlob, { upsert: true });
+        } catch (e) {
+          console.error("Auto-bucket save failed", e);
+        }
       }
     }
   };
 
   const parseRubric = (report: string) => {
     let cleanText = report;
-    const rubricData: any[] =[];
+    const rubricData: any[] = [];
     let finalScore = 0;
-    
+
     if (report.includes('[RUBRIC]') && report.includes('[END RUBRIC]')) {
       const rubricStr = report.split('[RUBRIC]')[1].split('[END RUBRIC]')[0].trim();
       cleanText = report.replace(/\[RUBRIC\][\s\S]*\[END RUBRIC\]/, '').trim();
-      
+
       const lines = rubricStr.split('\n').map(l => l.trim()).filter(l => l);
       let total = 0;
-      
+
       lines.forEach(line => {
         const parts = line.split('|');
         if (parts.length >= 4) {
           const score = parseInt(parts[1]) || 0;
-          const weightStr = parts[2].replace('%','');
+          const weightStr = parts[2].replace('%', '');
           const weight = (parseInt(weightStr) || 0) / 100;
           total += score * weight;
-          
+
           rubricData.push({
             category: parts[0].trim(),
             score: score,
@@ -581,46 +581,46 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
     let y = 20;
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 15;
-    
+
     const { cleanText, rubricData, finalScore } = parseRubric(reportContent);
     const cleanedReport = cleanText.replace(/========================================[\s\S]*The Chief Overseer/g, '').trim();
-    
+
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(11);
-    
+
     const splitText = doc.splitTextToSize(cleanedReport, 180);
     splitText.forEach((line: string) => {
       if (y > pageHeight - 20) { doc.addPage(); y = 20; }
       doc.text(line, margin, y);
       y += 6;
     });
-    
+
     y += 15;
-    
+
     if (rubricData.length > 0) {
       if (y > pageHeight - 100) { doc.addPage(); y = 20; }
-      const cw = [70, 30, 40, 40]; 
-      const tw = 180; 
-      
+      const cw = [70, 30, 40, 40];
+      const tw = 180;
+
       doc.setDrawColor(0);
       doc.setFillColor(255, 255, 255);
       doc.rect(margin, y, tw, 8, 'S');
       doc.setFont('helvetica', 'bold');
       doc.text("Prepare Data Visualization Leading to Data Analytics Level III", margin + 2, y + 6);
       y += 8;
-      
+
       doc.rect(margin, y, tw, 8, 'S');
       doc.text("Panelist: The Chief Overseer", margin + 2, y + 6);
       y += 8;
-      
-      doc.setFillColor(32, 55, 100); 
-      doc.rect(margin, y, tw/2, 8, 'FD');
-      doc.rect(margin + tw/2, y, tw/2, 8, 'FD');
+
+      doc.setFillColor(32, 55, 100);
+      doc.rect(margin, y, tw / 2, 8, 'FD');
+      doc.rect(margin + tw / 2, y, tw / 2, 8, 'FD');
       doc.setTextColor(255, 255, 255);
-      doc.text("Group number", margin + (tw/4), y + 6, { align: 'center' });
-      doc.text(teamName, margin + tw/2 + (tw/4), y + 6, { align: 'center' });
+      doc.text("Group number", margin + (tw / 4), y + 6, { align: 'center' });
+      doc.text(teamName, margin + tw / 2 + (tw / 4), y + 6, { align: 'center' });
       y += 8;
-      
+
       doc.setFillColor(255, 255, 255);
       doc.setTextColor(0);
       doc.rect(margin, y, tw, 8, 'S');
@@ -628,79 +628,79 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
       doc.setFont('helvetica', 'normal');
       doc.text(selectedPresenters.join(', ').substring(0, 50), margin + 60, y + 6);
       y += 8;
-      
+
       doc.rect(margin, y, tw, 8, 'S');
       doc.setFont('helvetica', 'bold');
       doc.text("Subject of the summary project", margin + 2, y + 6);
       doc.setFont('helvetica', 'normal');
       doc.text((presentationTopic || 'Live Defense').substring(0, 50), margin + 65, y + 6);
       y += 8;
-      
+
       doc.setFillColor(32, 55, 100);
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
-      
+
       doc.rect(margin, y, cw[0], 10, 'FD');
-      doc.rect(margin+cw[0], y, cw[1], 10, 'FD');
-      doc.rect(margin+cw[0]+cw[1], y, cw[2], 10, 'FD');
-      doc.rect(margin+cw[0]+cw[1]+cw[2], y, cw[3], 10, 'FD');
-      
-      doc.text("Category", margin + cw[0]/2, y + 6, { align: 'center' });
-      doc.text("Judge score\n(0-100)", margin + cw[0] + cw[1]/2, y + 4, { align: 'center' });
-      doc.text("Percentage\nweighting", margin + cw[0] + cw[1] + cw[2]/2, y + 4, { align: 'center' });
-      doc.text("Remarks", margin + cw[0] + cw[1] + cw[2] + cw[3]/2, y + 6, { align: 'center' });
+      doc.rect(margin + cw[0], y, cw[1], 10, 'FD');
+      doc.rect(margin + cw[0] + cw[1], y, cw[2], 10, 'FD');
+      doc.rect(margin + cw[0] + cw[1] + cw[2], y, cw[3], 10, 'FD');
+
+      doc.text("Category", margin + cw[0] / 2, y + 6, { align: 'center' });
+      doc.text("Judge score\n(0-100)", margin + cw[0] + cw[1] / 2, y + 4, { align: 'center' });
+      doc.text("Percentage\nweighting", margin + cw[0] + cw[1] + cw[2] / 2, y + 4, { align: 'center' });
+      doc.text("Remarks", margin + cw[0] + cw[1] + cw[2] + cw[3] / 2, y + 6, { align: 'center' });
       y += 10;
-      
+
       doc.setTextColor(0);
       doc.setFont('helvetica', 'normal');
-      
+
       rubricData.forEach(r => {
         doc.rect(margin, y, cw[0], 8, 'S');
-        doc.rect(margin+cw[0], y, cw[1], 8, 'S');
-        doc.rect(margin+cw[0]+cw[1], y, cw[2], 8, 'S');
-        doc.rect(margin+cw[0]+cw[1]+cw[2], y, cw[3], 8, 'S');
-        
+        doc.rect(margin + cw[0], y, cw[1], 8, 'S');
+        doc.rect(margin + cw[0] + cw[1], y, cw[2], 8, 'S');
+        doc.rect(margin + cw[0] + cw[1] + cw[2], y, cw[3], 8, 'S');
+
         doc.text(r.category.substring(0, 35), margin + 2, y + 6);
-        doc.text(r.score.toString(), margin + cw[0] + cw[1]/2, y + 6, { align: 'center' });
-        doc.text(r.weight.toString(), margin + cw[0] + cw[1] + cw[2]/2, y + 6, { align: 'center' });
+        doc.text(r.score.toString(), margin + cw[0] + cw[1] / 2, y + 6, { align: 'center' });
+        doc.text(r.weight.toString(), margin + cw[0] + cw[1] + cw[2] / 2, y + 6, { align: 'center' });
         doc.text(r.remark.substring(0, 20), margin + cw[0] + cw[1] + cw[2] + 2, y + 6);
         y += 8;
       });
-      
+
       doc.setFont('helvetica', 'bold');
       doc.rect(margin, y, cw[0], 8, 'S');
-      doc.rect(margin+cw[0], y, cw[1], 8, 'S');
-      doc.rect(margin+cw[0]+cw[1], y, cw[2], 8, 'S');
-      doc.rect(margin+cw[0]+cw[1]+cw[2], y, cw[3], 8, 'S');
+      doc.rect(margin + cw[0], y, cw[1], 8, 'S');
+      doc.rect(margin + cw[0] + cw[1], y, cw[2], 8, 'S');
+      doc.rect(margin + cw[0] + cw[1] + cw[2], y, cw[3], 8, 'S');
       doc.text("Final score", margin + 2, y + 6);
-      doc.text(finalScore.toString() + "%", margin + cw[0] + cw[1]/2, y + 6, { align: 'center' });
-      doc.text("100%", margin + cw[0] + cw[1] + cw[2]/2, y + 6, { align: 'center' });
+      doc.text(finalScore.toString() + "%", margin + cw[0] + cw[1] / 2, y + 6, { align: 'center' });
+      doc.text("100%", margin + cw[0] + cw[1] + cw[2] / 2, y + 6, { align: 'center' });
       y += 20;
     }
 
     if (y > pageHeight - 40) { doc.addPage(); y = 20; }
-    
+
     doc.setDrawColor(200);
     doc.line(margin, y, 195, y);
     y += 15;
-    
+
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
-    doc.setTextColor(204, 153, 0); 
+    doc.setTextColor(204, 153, 0);
     doc.text("OFFICIAL SEAL OF THE JUDGE", 105, y, { align: 'center' });
     y += 8;
-    
+
     doc.setFont('times', 'italic');
     doc.setFontSize(12);
     doc.setTextColor(100, 100, 100);
     doc.text("Signed,", 105, y, { align: 'center' });
     y += 8;
-    
+
     doc.setFont('times', 'bold');
     doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
     doc.text("The Chief Overseer", 105, y, { align: 'center' });
-    
+
     return doc.output('blob');
   };
 
@@ -752,11 +752,11 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
 
   const handleDownload = async (format: string, reportContent: string = finalReport) => {
     if (!reportContent || reportContent.includes('⚠️')) return;
-    
+
     const signatureText = `\n\n========================================\nOFFICIAL SEAL OF THE JUDGE\nSigned,\nThe Chief Overseer`;
     const { cleanText } = parseRubric(reportContent);
     const filename = `${teamName.replace(/\s+/g, '_')}_Defense_Report`;
-    
+
     if (format === 'txt') {
       const fullContent = cleanText + signatureText;
       const blob = new Blob([fullContent], { type: 'text/plain' });
@@ -783,14 +783,14 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginEmail || !loginPassword) return;
-    
+
     setShowLoginModal(false);
     setLoggedInUser(loginEmail);
     setEmailStatus('auth');
-    
-    await delay(1500); 
+
+    await delay(1500);
     setEmailStatus('generating');
-    
+
     const pdfBlob = await generatePDFBlob(finalReport);
     const reader = new FileReader();
     reader.readAsDataURL(pdfBlob);
@@ -800,7 +800,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
       const subject = `[CONFIDENTIAL VERDICT] Final Defense Assessment - ${teamName}`;
       const to = "dionsondaniel@gmail.com, ehn@healthbio.online";
       const filename = `${teamName.replace(/\s+/g, '_')}_Defense_Report.pdf`;
-      
+
       const emailBody = `The AI Panel has concluded its high-stakes live assessment of ${teamName}'s presentation.\n\nPlease find the official PDF dossier attached to reveal the final score and comprehensive evaluation.\n\nAutomated by TTSP Neural Core.\nSecurely routed by: ${loginEmail}`;
 
       const emlContent = `To: ${to}\nSubject: ${subject}\nX-Unsent: 1\nContent-Type: multipart/mixed; boundary="${boundary}"\n\n--${boundary}\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 7bit\n\n${emailBody}\n\n--${boundary}\nContent-Type: application/pdf; name="${filename}"\nContent-Transfer-Encoding: base64\nContent-Disposition: attachment; filename="${filename}"\n\n${base64data.match(/.{1,76}/g)?.join('\n') || base64data}\n--${boundary}--`;
@@ -822,8 +822,8 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
           {images.map((img, i) => {
             const angle = (i / images.length) * 2 * Math.PI;
             return (
-              <div 
-                key={i} 
+              <div
+                key={i}
                 className="absolute w-12 h-12 rounded-lg border-2 border-indigo-500 overflow-hidden shadow-[0_0_15px_rgba(99,102,241,0.5)] bg-slate-800"
                 style={{
                   top: `calc(50% - ${Math.cos(angle) * 100}px)`,
@@ -836,7 +836,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
             )
           })}
           <div className="absolute inset-0 flex items-center justify-center">
-             <Sparkles className="w-10 h-10 text-indigo-400 animate-pulse" />
+            <Sparkles className="w-10 h-10 text-indigo-400 animate-pulse" />
           </div>
         </div>
         <p className="mt-12 font-black uppercase tracking-widest text-indigo-400 animate-pulse">Syncing Neural Networks...</p>
@@ -852,12 +852,12 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
       leo: { name: 'Data Leo', icon: BarChart3, color: 'text-purple-400', border: 'border-purple-500/30', bg: 'bg-purple-500', textColors: 'text-purple-50', placeholder: 'Speak or type analytical methodology...' },
       max: { name: 'QA Max', icon: ShieldCheck, color: 'text-rose-400', border: 'border-rose-500/30', bg: 'bg-rose-500', textColors: 'text-rose-50', placeholder: 'Speak or type validation steps...' }
     }[agentId];
-    
+
     const Icon = config.icon;
     const listeningActive = isListening === agentId;
 
     return (
-      <motion.div 
+      <motion.div
         key={agentId}
         initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
         className={`bg-slate-800/50 border ${config.border} rounded-2xl md:rounded-3xl p-5 md:p-6 shadow-lg relative overflow-hidden transition-all duration-500 ${isActive ? 'ring-1 ring-white/10' : 'opacity-60 grayscale-[30%]'}`}
@@ -869,19 +869,19 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
         <p className="text-white text-sm md:text-lg font-medium mb-4 leading-relaxed">
           "{generatedQuestions?.[agentId]}"
         </p>
-        
+
         {isActive ? (
           <div className="relative">
-            <textarea 
-              value={answers[agentId]} 
-              onChange={e => setAnswers({...answers, [agentId]: e.target.value})} 
-              rows={4} 
-              className={`w-full bg-slate-900 border ${config.border} ${config.textColors} font-medium text-xs md:text-sm rounded-xl px-4 py-3 pr-12 focus:outline-none focus:border-white/50 transition-colors`} 
-              placeholder={config.placeholder} 
+            <textarea
+              value={answers[agentId]}
+              onChange={e => setAnswers({ ...answers, [agentId]: e.target.value })}
+              rows={4}
+              className={`w-full bg-slate-900 border ${config.border} ${config.textColors} font-medium text-xs md:text-sm rounded-xl px-4 py-3 pr-12 focus:outline-none focus:border-white/50 transition-colors`}
+              placeholder={config.placeholder}
               autoFocus
             />
             <div className="absolute right-3 bottom-3 flex flex-col gap-2 w-9 items-center">
-              <select 
+              <select
                 title="Voice Language"
                 value={speechLang}
                 onChange={(e) => {
@@ -898,10 +898,10 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
                 <option value="ceb-PH">BIS</option>
               </select>
               <button onClick={() => toggleSpeechRecognition(agentId)} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${listeningActive ? 'bg-rose-500 text-white animate-pulse shadow-[0_0_15px_rgba(244,63,94,0.5)]' : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'}`}>
-                 <Mic className="w-4 h-4" />
+                <Mic className="w-4 h-4" />
               </button>
-              <button onClick={() => { if(isListening) { recognitionRef.current?.stop(); setIsListening(null); } }} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${!listeningActive ? 'bg-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'}`}>
-                 <Keyboard className="w-4 h-4" />
+              <button onClick={() => { if (isListening) { recognitionRef.current?.stop(); setIsListening(null); } }} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${!listeningActive ? 'bg-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'}`}>
+                <Keyboard className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -916,7 +916,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
   };
 
   const RobotAvatar = ({ agent, active, scale = 1 }: any) => (
-    <motion.div 
+    <motion.div
       animate={{ y: active ? [-5, 5, -5] : 0, scale: active ? scale * 1.1 : scale }}
       transition={{ repeat: active ? Infinity : 0, duration: 3, ease: "easeInOut" }}
       className={`flex flex-col items-center ${active ? '' : 'opacity-40 grayscale'} transition-all duration-500`}
@@ -935,7 +935,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
 
   const { cleanText, rubricData, finalScore } = parseRubric(finalReport);
 
-  const stepsData =[
+  const stepsData = [
     { step: "1. Team Setup", desc: "Select members & presenters.", icon: Users, color: "text-blue-400" },
     { step: "2. Presentation (15mins.)", desc: "Strict timer for your pitch.", icon: Clock, color: "text-emerald-400" },
     { step: "3. AI Defense (10mins)", desc: "Upload PDF & Face 5 Panelists.", icon: ShieldCheck, color: "text-rose-400" }
@@ -950,8 +950,8 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
           .scrollbar-sleek::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
           .scrollbar-sleek::-webkit-scrollbar-thumb:hover { background: #6366f1; }
         `}</style>
-        
-        <motion.div 
+
+        <motion.div
           initial={{ opacity: 0, scale: 0.9, y: 50 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 50 }}
@@ -999,7 +999,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
           </div>
 
           <div className="flex-1 overflow-y-auto flex flex-col md:flex-row relative">
-            
+
             {/* 5 PANELISTS DISPLAY */}
             <div className="w-full md:w-[120px] lg:w-[160px] bg-slate-950/50 border-b md:border-b-0 md:border-r border-slate-800 p-4 flex flex-row md:flex-col justify-around items-center gap-2 relative overflow-hidden shrink-0 z-10">
               <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-indigo-500/5 via-transparent to-rose-500/5 pointer-events-none" />
@@ -1012,11 +1012,11 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
 
             {/* INTERACTIVE STAGE AREA */}
             <div className="flex-1 p-4 md:p-10 overflow-y-auto scrollbar-sleek relative z-20">
-              
+
               {/* STAGE 0: INTRO */}
               {stage === 'intro' && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-4xl mx-auto w-full text-center">
-                  <motion.div 
+                  <motion.div
                     initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2 }}
                     className="w-24 h-24 bg-indigo-500/10 rounded-3xl flex items-center justify-center mb-6 mx-auto border border-indigo-500/30 transform rotate-12 shadow-[0_0_50px_rgba(99,102,241,0.2)]"
                   >
@@ -1024,16 +1024,16 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
                   </motion.div>
                   <h2 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tighter mb-4">Aura's Guidelines</h2>
                   <p className="text-slate-400 font-medium max-w-2xl mx-auto mb-12">Welcome to the Live Defense. Follow the sequence below.</p>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 text-left">
                     {stepsData.map((item, i) => {
-                      const isActive = introSequence >= i + 2; 
+                      const isActive = introSequence >= i + 2;
                       return (
-                        <motion.div 
-                          key={item.step} 
-                          initial={{ y: 50, opacity: 0 }} 
-                          animate={{ y: isActive ? 0 : 50, opacity: isActive ? 1 : 0 }} 
-                          transition={{ duration: 0.5 }} 
+                        <motion.div
+                          key={item.step}
+                          initial={{ y: 50, opacity: 0 }}
+                          animate={{ y: isActive ? 0 : 50, opacity: isActive ? 1 : 0 }}
+                          transition={{ duration: 0.5 }}
                           className={`bg-slate-800/80 p-6 rounded-3xl border transition-all duration-500 ${isActive ? 'border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.3)]' : 'border-slate-700 shadow-xl'}`}
                         >
                           <item.icon className={`w-10 h-10 mb-4 ${item.color}`} />
@@ -1044,7 +1044,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
                     })}
                   </div>
 
-                  <motion.div 
+                  <motion.div
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: introSequence >= 5 ? 1 : 0.9, opacity: introSequence >= 5 ? 1 : 0 }}
                     transition={{ duration: 0.6 }}
@@ -1060,16 +1060,16 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
                       <p className="text-pink-200/80 text-sm md:text-base leading-relaxed mb-4">
                         After your grueling defense, <strong>Gemma</strong> will host the Live Badges Arena! The audience can vote for awards like <span className="text-yellow-400 font-bold">Query Master</span> before The Judge delivers the final verdict.
                       </p>
-                      
+
                       <AnimatePresence>
                         {introSequence >= 6 && (
-                           <motion.button 
-                             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                             onClick={() => { window.speechSynthesis?.cancel(); setStage('upload'); }} 
-                             className="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl uppercase tracking-widest transition-transform hover:scale-105 shadow-xl shadow-indigo-500/20 text-sm flex items-center gap-2 mt-4"
-                           >
-                             Enter the Arena <ArrowRight className="w-4 h-4" />
-                           </motion.button>
+                          <motion.button
+                            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                            onClick={() => { window.speechSynthesis?.cancel(); setStage('upload'); }}
+                            className="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl uppercase tracking-widest transition-transform hover:scale-105 shadow-xl shadow-indigo-500/20 text-sm flex items-center gap-2 mt-4"
+                          >
+                            Enter the Arena <ArrowRight className="w-4 h-4" />
+                          </motion.button>
                         )}
                       </AnimatePresence>
                     </div>
@@ -1077,12 +1077,12 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
 
                   {/* Skip Intro Fallback Button */}
                   {introSequence < 6 && (
-                     <button 
-                       onClick={() => { window.speechSynthesis?.cancel(); setIntroSequence(6); }} 
-                       className="text-slate-500 hover:text-white underline text-xs uppercase tracking-widest font-bold mt-4 transition-colors"
-                     >
-                       Skip Aura's Intro
-                     </button>
+                    <button
+                      onClick={() => { window.speechSynthesis?.cancel(); setIntroSequence(6); }}
+                      className="text-slate-500 hover:text-white underline text-xs uppercase tracking-widest font-bold mt-4 transition-colors"
+                    >
+                      Skip Aura's Intro
+                    </button>
                   )}
                 </motion.div>
               )}
@@ -1091,12 +1091,14 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
               {stage === 'upload' && (
                 <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="max-w-2xl mx-auto space-y-6 md:space-y-8 py-4 relative z-10">
                   <div className="flex items-center gap-3 md:gap-4 mb-2 md:mb-6">
-                    <UploadCloud className="w-6 h-6 md:w-8 md:h-8 text-indigo-400" />
-                    <h2 className="text-xl md:text-3xl font-black text-white uppercase">Upload Presentation</h2>
+                    <ShieldCheck className="w-6 h-6 md:w-8 md:h-8 text-indigo-400" />
+                    <h2 className="text-xl md:text-3xl font-black text-white uppercase">
+                      Setup, Presentation & AI Defense
+                    </h2>
                   </div>
 
                   <div className="space-y-5 md:space-y-6">
-                    
+
                     {/* DIFFICULTY SELECTOR */}
                     <div>
                       <label className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Difficulty Mode</label>
@@ -1105,13 +1107,12 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
                           <button
                             key={lvl}
                             onClick={() => setDifficulty(lvl)}
-                            className={`py-3 md:py-4 rounded-xl border font-bold text-xs md:text-sm uppercase tracking-widest transition-all ${
-                              difficulty === lvl 
-                                ? lvl === 'Easy' ? 'bg-emerald-600/20 border-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
+                            className={`py-3 md:py-4 rounded-xl border font-bold text-xs md:text-sm uppercase tracking-widest transition-all ${difficulty === lvl
+                                ? lvl === 'Easy' ? 'bg-emerald-600/20 border-emerald-500 text-white shadow-lg shadow-emerald-500/20'
                                   : lvl === 'Intermediate' ? 'bg-amber-600/20 border-amber-500 text-white shadow-lg shadow-amber-500/20'
-                                  : 'bg-rose-600/20 border-rose-500 text-white shadow-lg shadow-rose-500/20'
+                                    : 'bg-rose-600/20 border-rose-500 text-white shadow-lg shadow-rose-500/20'
                                 : 'bg-slate-800/50 border-slate-700 text-slate-500 hover:bg-slate-800'
-                            }`}
+                              }`}
                           >
                             {lvl}
                           </button>
@@ -1140,9 +1141,9 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="md:col-span-1">
                           <label className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Cohort</label>
-                          <select 
-                            value={selectedCohort} 
-                            onChange={(e) => setSelectedCohort(e.target.value)} 
+                          <select
+                            value={selectedCohort}
+                            onChange={(e) => setSelectedCohort(e.target.value)}
                             className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-xl px-3 py-3 outline-none focus:border-indigo-500"
                           >
                             <option value="">Select</option>
@@ -1152,18 +1153,18 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
                         <div className="md:col-span-2">
                           <label className="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Group Number/Team Name</label>
                           {selectedCohort === '5TH' ? (
-                            <select 
-                              value={teamName} onChange={handleTeamSelection} 
+                            <select
+                              value={teamName} onChange={handleTeamSelection}
                               className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-xl px-4 py-3 focus:border-indigo-500 outline-none"
                             >
                               <option value="">Select a 5TH Cohort Team</option>
                               {Object.keys(TEAMS_5TH).map(t => <option key={t} value={t}>{t}</option>)}
                             </select>
                           ) : (
-                            <input 
-                              type="text" value={teamName} onChange={e => setTeamName(e.target.value)} 
-                              className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-xl px-4 py-3 focus:border-indigo-500 outline-none" 
-                              placeholder="e.g., Jack Daniel Team" 
+                            <input
+                              type="text" value={teamName} onChange={e => setTeamName(e.target.value)}
+                              className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-xl px-4 py-3 focus:border-indigo-500 outline-none"
+                              placeholder="e.g., Jack Daniel Team"
                             />
                           )}
                         </div>
@@ -1195,14 +1196,13 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
                       </div>
                     </div>
 
-                    <button 
-                      onClick={startPresentation} 
+                    <button
+                      onClick={startPresentation}
                       disabled={hasPresented}
-                      className={`w-full py-4 border-2 font-black rounded-xl uppercase tracking-widest text-xs md:text-sm transition-all flex items-center justify-center gap-3 ${
-                        hasPresented 
-                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500 shadow-none' 
+                      className={`w-full py-4 border-2 font-black rounded-xl uppercase tracking-widest text-xs md:text-sm transition-all flex items-center justify-center gap-3 ${hasPresented
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500 shadow-none'
                           : 'bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:scale-[1.02]'
-                      }`}
+                        }`}
                     >
                       {hasPresented ? <><CheckCircle2 className="w-5 h-5" /> Presentation Completed</> : <><Clock className="w-5 h-5" /> Start 15-Minute Presentation</>}
                     </button>
@@ -1226,8 +1226,8 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
                         <textarea value={presentationTopic} onChange={e => setPresentationTopic(e.target.value)} disabled={!hasPresented} rows={3} className="w-full bg-slate-900 border border-slate-700 text-white text-sm md:text-base rounded-xl px-4 py-3 focus:border-indigo-500 outline-none resize-none placeholder-slate-600 disabled:cursor-not-allowed" placeholder="Specify your main goals, revenue trends, or key metrics here." />
                       </div>
 
-                      <button 
-                        onClick={processPresentation} 
+                      <button
+                        onClick={processPresentation}
                         disabled={isProcessing || !teamName || (!presentationTopic && !uploadedFile) || !hasPresented}
                         className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-black rounded-xl uppercase tracking-widest text-xs md:text-sm transition-colors flex items-center justify-center gap-3"
                       >
@@ -1241,12 +1241,11 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
               {/* STAGE 2: PROGRESSIVE Q&A */}
               {stage === 'qna' && generatedQuestions && (
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto space-y-6 md:space-y-8 py-4 relative">
-                  
+
                   {/* 10 MINUTE Q&A TIMER HUD */}
                   <div className="sticky top-0 z-50 mb-8 flex justify-center">
-                    <div className={`flex items-center gap-4 px-6 py-3 rounded-full border shadow-2xl backdrop-blur-md transition-colors ${
-                      qnaTimeLeft < 60 ? 'bg-rose-950/80 border-rose-500 text-rose-400 shadow-[0_0_30px_rgba(244,63,94,0.3)] animate-pulse' : 'bg-indigo-950/80 border-indigo-500 text-indigo-400'
-                    }`}>
+                    <div className={`flex items-center gap-4 px-6 py-3 rounded-full border shadow-2xl backdrop-blur-md transition-colors ${qnaTimeLeft < 60 ? 'bg-rose-950/80 border-rose-500 text-rose-400 shadow-[0_0_30px_rgba(244,63,94,0.3)] animate-pulse' : 'bg-indigo-950/80 border-indigo-500 text-indigo-400'
+                      }`}>
                       <Timer className="w-6 h-6" />
                       <div className="flex flex-col">
                         <span className="text-[10px] font-bold uppercase tracking-widest">Defense Timer</span>
@@ -1265,20 +1264,19 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
                   </div>
 
                   <div className="space-y-6">
-                    {qnaOrder.slice(0, currentQIndex + 1).map((agent, idx) => 
+                    {qnaOrder.slice(0, currentQIndex + 1).map((agent, idx) =>
                       renderQuestionBox(agent, idx === currentQIndex)
                     )}
                   </div>
 
                   <div className="pt-6 border-t border-slate-800 pb-20">
-                    <button 
-                      onClick={handleNextQuestion} 
+                    <button
+                      onClick={handleNextQuestion}
                       disabled={isProcessing || !answers[qnaOrder[currentQIndex]]?.trim()}
-                      className={`w-full py-4 md:py-5 font-black text-xs md:text-sm rounded-2xl uppercase tracking-widest transition-all flex items-center justify-center gap-3 shadow-xl ${
-                        currentQIndex < 4 
-                          ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20' 
+                      className={`w-full py-4 md:py-5 font-black text-xs md:text-sm rounded-2xl uppercase tracking-widest transition-all flex items-center justify-center gap-3 shadow-xl ${currentQIndex < 4
+                          ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20'
                           : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-500/20'
-                      } disabled:bg-slate-800 disabled:text-slate-500 disabled:shadow-none`}
+                        } disabled:bg-slate-800 disabled:text-slate-500 disabled:shadow-none`}
                     >
                       {isProcessing ? (
                         <><Loader2 className="w-5 h-5 md:w-6 md:h-6 animate-spin" /> The Judge is calculating scores...</>
@@ -1301,22 +1299,22 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
                     </div>
                     <h2 className="text-3xl md:text-4xl font-black text-white uppercase tracking-tighter">The Judge's Verdict</h2>
                     <p className="text-amber-400 font-bold text-[10px] md:text-xs uppercase tracking-widest">Final Evaluation for {teamName}</p>
-                    
+
                     {isTimedOut && (
                       <div className="mt-4 inline-flex items-center gap-2 bg-rose-500/10 border border-rose-500/30 text-rose-400 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest">
                         <AlertTriangle className="w-4 h-4" /> Time Expired - Forced Submission
                       </div>
                     )}
-                    
+
                     {finalReport && !finalReport.includes('⚠️') && (
                       <p className="text-slate-400 text-xs mt-2 italic flex items-center justify-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> Auto-downloaded PDF Document</p>
                     )}
-                    
+
                     <div className="flex justify-center mt-6">
-                       <button onClick={() => submitAnswersAndGrade(false, isTimedOut)} disabled={isProcessing} className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-xl text-xs font-bold transition-colors disabled:opacity-50">
-                          {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                          Recalculate Verdict
-                       </button>
+                      <button onClick={() => submitAnswersAndGrade(false, isTimedOut)} disabled={isProcessing} className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-xl text-xs font-bold transition-colors disabled:opacity-50">
+                        {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                        Recalculate Verdict
+                      </button>
                     </div>
                   </div>
 
@@ -1328,57 +1326,57 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
                     {/* ELEGANT UI TABLE MATCHING PDF SCREENSHOT */}
                     {rubricData.length > 0 && (
                       <div className="bg-white rounded p-4 text-black font-sans text-xs md:text-sm mt-4 border border-slate-300 shadow-xl overflow-x-auto">
-                         <div className="border border-slate-400 min-w-[600px]">
-                             {/* Row 1 */}
-                             <div className="p-2 border-b border-slate-400 font-bold text-sm md:text-base bg-white text-black">
-                               Prepare Data Visualization Leading to Data Analytics Level III
-                             </div>
-                             {/* Row 2 */}
-                             <div className="p-2 border-b border-slate-400 font-bold bg-white text-black">
-                               Panelist: The Chief Overseer
-                             </div>
-                             {/* Row 3 - Navy Blue Header */}
-                             <div className="flex border-b border-slate-400 bg-[#1e3a5f] text-white">
-                                 <div className="w-1/2 p-2 font-bold text-center border-r border-slate-400">Group number</div>
-                                 <div className="w-1/2 p-2 font-bold text-center">{teamName}</div>
-                             </div>
-                             {/* Row 4 */}
-                             <div className="flex border-b border-slate-400 bg-white text-black">
-                                 <div className="w-1/2 p-2 font-bold border-r border-slate-400">Names of participants</div>
-                                 <div className="w-1/2 p-2">{selectedPresenters.join(', ')}</div>
-                             </div>
-                             {/* Row 5 */}
-                             <div className="flex border-b border-slate-400 bg-white text-black">
-                                 <div className="w-1/2 p-2 font-bold border-r border-slate-400">Subject of the summary project</div>
-                                 <div className="w-1/2 p-2">{presentationTopic || 'Live Defense'}</div>
-                             </div>
-                             {/* Columns Headers */}
-                             <div className="flex bg-[#1e3a5f] text-white font-bold text-center border-b border-slate-400">
-                                 <div className="w-[40%] p-2 border-r border-slate-400">Category</div>
-                                 <div className="w-[20%] p-2 border-r border-slate-400">Judge score<br/>(0-100)</div>
-                                 <div className="w-[20%] p-2 border-r border-slate-400">Percentage<br/>weighting</div>
-                                 <div className="w-[20%] p-2">Remarks</div>
-                             </div>
-                             {/* Data Rows */}
-                             {rubricData.map((r, i) => (
-                               <div key={i} className="flex border-b border-slate-400 bg-white text-black">
-                                 <div className="w-[40%] p-2 border-r border-slate-400">{r.category}</div>
-                                 <div className="w-[20%] p-2 text-center border-r border-slate-400 flex items-center justify-center">{r.score}</div>
-                                 <div className="w-[20%] p-2 text-center border-r border-slate-400 flex items-center justify-center">{r.weight}</div>
-                                 <div className="w-[20%] p-2">{r.remark}</div>
-                               </div>
-                             ))}
-                             {/* Final Row */}
-                             <div className="flex font-bold bg-white text-black">
-                                 <div className="w-[40%] p-2 border-r border-slate-400">Final score</div>
-                                 <div className="w-[20%] p-2 text-center border-r border-slate-400 flex items-center justify-center">{finalScore}%</div>
-                                 <div className="w-[20%] p-2 text-center border-r border-slate-400 flex items-center justify-center">100%</div>
-                                 <div className="w-[20%] p-2"></div>
-                             </div>
-                         </div>
+                        <div className="border border-slate-400 min-w-[600px]">
+                          {/* Row 1 */}
+                          <div className="p-2 border-b border-slate-400 font-bold text-sm md:text-base bg-white text-black">
+                            Prepare Data Visualization Leading to Data Analytics Level III
+                          </div>
+                          {/* Row 2 */}
+                          <div className="p-2 border-b border-slate-400 font-bold bg-white text-black">
+                            Panelist: The Chief Overseer
+                          </div>
+                          {/* Row 3 - Navy Blue Header */}
+                          <div className="flex border-b border-slate-400 bg-[#1e3a5f] text-white">
+                            <div className="w-1/2 p-2 font-bold text-center border-r border-slate-400">Group number</div>
+                            <div className="w-1/2 p-2 font-bold text-center">{teamName}</div>
+                          </div>
+                          {/* Row 4 */}
+                          <div className="flex border-b border-slate-400 bg-white text-black">
+                            <div className="w-1/2 p-2 font-bold border-r border-slate-400">Names of participants</div>
+                            <div className="w-1/2 p-2">{selectedPresenters.join(', ')}</div>
+                          </div>
+                          {/* Row 5 */}
+                          <div className="flex border-b border-slate-400 bg-white text-black">
+                            <div className="w-1/2 p-2 font-bold border-r border-slate-400">Subject of the summary project</div>
+                            <div className="w-1/2 p-2">{presentationTopic || 'Live Defense'}</div>
+                          </div>
+                          {/* Columns Headers */}
+                          <div className="flex bg-[#1e3a5f] text-white font-bold text-center border-b border-slate-400">
+                            <div className="w-[40%] p-2 border-r border-slate-400">Category</div>
+                            <div className="w-[20%] p-2 border-r border-slate-400">Judge score<br />(0-100)</div>
+                            <div className="w-[20%] p-2 border-r border-slate-400">Percentage<br />weighting</div>
+                            <div className="w-[20%] p-2">Remarks</div>
+                          </div>
+                          {/* Data Rows */}
+                          {rubricData.map((r, i) => (
+                            <div key={i} className="flex border-b border-slate-400 bg-white text-black">
+                              <div className="w-[40%] p-2 border-r border-slate-400">{r.category}</div>
+                              <div className="w-[20%] p-2 text-center border-r border-slate-400 flex items-center justify-center">{r.score}</div>
+                              <div className="w-[20%] p-2 text-center border-r border-slate-400 flex items-center justify-center">{r.weight}</div>
+                              <div className="w-[20%] p-2">{r.remark}</div>
+                            </div>
+                          ))}
+                          {/* Final Row */}
+                          <div className="flex font-bold bg-white text-black">
+                            <div className="w-[40%] p-2 border-r border-slate-400">Final score</div>
+                            <div className="w-[20%] p-2 text-center border-r border-slate-400 flex items-center justify-center">{finalScore}%</div>
+                            <div className="w-[20%] p-2 text-center border-r border-slate-400 flex items-center justify-center">100%</div>
+                            <div className="w-[20%] p-2"></div>
+                          </div>
+                        </div>
                       </div>
                     )}
-                    
+
                     <div className="mt-8 pt-6 border-t border-slate-700/50 flex flex-col items-center md:items-end text-center md:text-right">
                       <div className="mb-4 relative">
                         <div className="w-16 h-16 md:w-20 md:h-20 rounded-full border border-amber-500/20 flex items-center justify-center bg-amber-500/5 shadow-[0_0_20px_rgba(251,191,36,0.1)]">
@@ -1410,15 +1408,15 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
                     <div>
                       <h3 className="text-lg md:text-xl font-bold text-white mb-2">Nova Outreach Transmission</h3>
                       <p className="text-rose-300/80 text-[10px] md:text-xs max-w-md mx-auto leading-relaxed">
-                        {loggedInUser 
+                        {loggedInUser
                           ? `Transmit official evaluation from ${loggedInUser} to dionsondaniel@gmail.com and ehn@healthbio.online via secure SMTP protocol.`
                           : `Auto-generate a secure email draft containing the finalized PDF evaluation. Authentication required.`
                         }
                       </p>
                     </div>
-                    
+
                     {emailStatus === 'idle' ? (
-                      <button 
+                      <button
                         onClick={() => setShowLoginModal(true)}
                         className="px-6 py-4 w-full md:w-auto bg-rose-600 hover:bg-rose-500 text-white font-black text-xs md:text-sm rounded-xl md:rounded-2xl uppercase tracking-widest flex items-center justify-center gap-3 mx-auto shadow-lg shadow-rose-600/30 transition-all"
                       >
@@ -1443,11 +1441,11 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
 
             </div>
           </div>
-          
+
           {/* 15-MINUTE PRESENTATION FULL-SCREEN OVERLAY MODAL */}
           <AnimatePresence>
             {showPresentationTimer && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 className="absolute inset-0 z-[400] bg-slate-950/95 backdrop-blur-3xl flex flex-col items-center justify-center p-6"
               >
@@ -1459,7 +1457,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
                   <p className="text-emerald-400 font-bold mt-2 uppercase tracking-widest">{teamName}</p>
                 </div>
 
-                <motion.div 
+                <motion.div
                   initial={{ scale: 0.8 }} animate={{ scale: 1 }}
                   className="text-[6rem] md:text-[10rem] font-black font-mono text-white tracking-tighter drop-shadow-[0_0_50px_rgba(16,185,129,0.3)] my-10"
                 >
@@ -1468,7 +1466,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
 
                 <div className="absolute bottom-10 flex flex-col items-center">
                   <p className="text-slate-400 mb-6 font-medium text-sm">Presenters: Share your screen and begin your pitch.</p>
-                  <button 
+                  <button
                     onClick={finishPresentation}
                     className="px-8 py-4 bg-slate-800 hover:bg-emerald-600 border border-slate-700 hover:border-emerald-500 text-white font-black rounded-full uppercase tracking-widest transition-all shadow-xl hover:shadow-[0_0_30px_rgba(16,185,129,0.4)]"
                   >
@@ -1482,15 +1480,15 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
           {/* SIMULATED LOGIN MODAL */}
           <AnimatePresence>
             {showLoginModal && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 className="absolute inset-0 z-[500] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
               >
-                <motion.div 
+                <motion.div
                   initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
                   className="bg-slate-900 border border-slate-700 p-8 rounded-3xl shadow-2xl w-full max-w-sm relative"
                 >
-                  <button onClick={() => setShowLoginModal(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X className="w-5 h-5"/></button>
+                  <button onClick={() => setShowLoginModal(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X className="w-5 h-5" /></button>
                   <div className="flex flex-col items-center mb-6">
                     <div className="w-12 h-12 bg-indigo-500/20 rounded-full flex items-center justify-center mb-4">
                       <UserCircle className="w-6 h-6 text-indigo-400" />
@@ -1498,11 +1496,11 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
                     <h3 className="text-xl font-bold text-white">System Authentication</h3>
                     <p className="text-xs text-slate-400 text-center mt-1">Sign in to authorize outbound SMTP email transmission.</p>
                   </div>
-                  
+
                   <form onSubmit={handleLoginSubmit} className="space-y-4">
                     <div>
                       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email Address</label>
-                      <input 
+                      <input
                         type="email" required
                         value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)}
                         placeholder="e.g., ehn@healthbio.online"
@@ -1511,7 +1509,7 @@ export const AILivePanel: React.FC<AILivePanelProps> = ({ isOpen, onClose, learn
                     </div>
                     <div>
                       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Password</label>
-                      <input 
+                      <input
                         type="password" required
                         value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)}
                         placeholder="••••••••"
