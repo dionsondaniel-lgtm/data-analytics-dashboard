@@ -54,7 +54,9 @@ export const DEFAULT_GIDS: Record<string, string> = {
   "Excel Attendance To BQ - 4": "1964136017",
   "SQL Attendance To BQ - 4": "0",
   "SQL Class Practice to BQ - 5": "2069441620",
-  "SQL Attendance To BQ - 5": "510646361"
+  "SQL Attendance To BQ - 5": "510646361",
+  "Excel Attendance To BQ - 5": "354369398",
+  "Excel Class Practice to BQ - 5": "1119464560"
 };
 
 export const getStoredGIDs = (): Record<string, string> => {
